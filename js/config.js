@@ -15,6 +15,10 @@ window.OGH_CONFIG = {
   // Kullanıcı adları Supabase'e "kullaniciadi@emailDomain" olarak iletilir (e-posta gönderilmez).
   emailDomain: "ogretmenhesap.app",
 
+  // Uygulamalarım → Oyunlar bölümünde gösterilen Google Drive oyun klasörü
+  // (klasör "Bağlantıya sahip olan herkes görüntüleyebilir" olarak paylaşılmış olmalı).
+  gamesDriveFolder: "https://drive.google.com/drive/folders/1drU1LxRUHlHhF0xlzBBskqiCqjbsrtPD?usp=sharing",
+
   // Supabase → Project Settings → API (Data API) bölümünden:
   //   url:     Project URL  (https://PROJE-ID.supabase.co)
   //   anonKey: "anon public" / "publishable" anahtar

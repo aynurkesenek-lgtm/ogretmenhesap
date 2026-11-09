@@ -1062,6 +1062,8 @@
     site: { icon: "🔗", label: "Site", group: "🔗 Siteler", open: "↗ Aç", log: "Siteye girdi: ", act: "site" },
   };
   const isDriveUrl = (u) => /^https:\/\/(drive|docs)\.google\.com\//i.test(u);
+  const GAMES_FOLDER = safeUrl((window.OGH_CONFIG || {}).gamesDriveFolder);
+  const driveFolderId = (u) => { const m = /\/folders\/([\w-]+)/.exec(u || "") || /[?&]id=([\w-]+)/.exec(u || ""); return m ? m[1] : ""; };
 
   async function viewResources(token) {
     app.innerHTML = `<p class="muted center">Yükleniyor…</p>`;
@@ -1103,10 +1105,17 @@
           ${g.k === "oyun" ? `<article class="card module builtin">
             <h3>🧮 Hızlı Matematik</h3>
             <p class="muted">Sitenin kendi oyunu · 10 soru, süre tutulur. Skorlar ${T ? "öğrencinin geçmişine" : "öğretmenine"} kaydedilir.</p>
-            <a class="btn" href="#/oyun/matematik">🎮 Oyna</a></article>` : ""}
+            <a class="btn" href="#/oyun/matematik">🎮 Oyna</a></article>
+          ${GAMES_FOLDER ? `<article class="card module app-drive">
+            <h3>📁 Oyun Klasörü</h3>
+            <p class="muted">Google Drive'daki oyun koleksiyonu. Klasörü buradan açıp oyunları seçebilirsin.</p>
+            <div class="actions" style="margin-top:auto">
+              ${driveFolderId(GAMES_FOLDER) ? `<a class="btn" href="#/oyun/drive">▶ Burada aç</a>` : ""}
+              <a class="btn ghost" href="${esc(GAMES_FOLDER)}" target="_blank" rel="noopener" data-games-folder>📁 Drive'da aç</a>
+            </div></article>` : ""}` : ""}
           ${g.items.map(card).join("")}
         </div>`).join("")}
-      ${!visible.length && !T ? `<p class="muted">Öğretmenin henüz uygulama paylaşmadı.</p>` : ""}`;
+      ${!visible.length && !T && !GAMES_FOLDER ? `<p class="muted">Öğretmenin henüz uygulama paylaşmadı.</p>` : ""}`;
 
     if (T) {
       const kindSel = $("#r-kind");
@@ -1132,6 +1141,7 @@
     app.addEventListener("click", onResClick);
     function onResClick(ev) {
       if (!live(token)) { app.removeEventListener("click", onResClick); return; }
+      if (ev.target.closest("[data-games-folder]")) { B.logActivity("oyun", "Drive oyun klasörünü açtı", GAMES_FOLDER); return; }
       const opener = ev.target.closest("[data-open]");
       const delId = ev.target.dataset.del;
       if (opener) {
@@ -1145,6 +1155,22 @@
         B.deleteResource(delId).then(render).catch((e) => alert(e.message));
       }
     }
+  }
+
+  function viewDriveGames() {
+    const id = driveFolderId(GAMES_FOLDER);
+    if (!id) return go("#/uygulamalar");
+    B.logActivity("oyun", "Drive oyun klasörünü açtı", GAMES_FOLDER);
+    app.innerHTML = `
+      <p><a href="#/uygulamalar">← Uygulamalarım</a></p>
+      <div class="welcome">
+        <div><h1>📁 Oyun Klasörü</h1><span class="muted">Bir oyuna tıklayınca Google Drive'da açılır.</span></div>
+        <a class="btn ghost small" href="${esc(GAMES_FOLDER)}" target="_blank" rel="noopener">📁 Drive'da aç ↗</a>
+      </div>
+      <div class="card drive-frame">
+        <iframe src="https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(id)}#grid" title="Oyun klasörü" loading="lazy" referrerpolicy="no-referrer"></iframe>
+      </div>
+      <p class="hint">Klasör görünmüyorsa "Drive'da aç" butonunu kullanın. (Klasör "Bağlantıya sahip olan herkes" ile paylaşılmış olmalıdır.)</p>`;
   }
 
   function viewMathGame(token) {
@@ -1229,7 +1255,7 @@
           case "odev": await viewAssignment(token, arg); break;
           case "mesajlar": await viewMessages(token, arg); break;
           case "uygulamalar": case "oyunlar": await viewResources(token); break;
-          case "oyun": viewMathGame(token); break;
+          case "oyun": if (arg === "drive") viewDriveGames(); else viewMathGame(token); break;
           default: await viewDashboard(token);
         }
       }
