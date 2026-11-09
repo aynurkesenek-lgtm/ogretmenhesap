@@ -97,6 +97,18 @@ create table if not exists public.messages (        -- mesajlar
 );
 create index if not exists messages_conv_idx on public.messages (conv_id, at);
 
+create table if not exists public.grades (          -- not çizelgesi (Google Tablosundan aktarılır)
+  school_no   text primary key,                     -- öğrenci (okul) numarası
+  first_name  text default '',
+  last_name   text default '',
+  scores      jsonb not null default '[]'::jsonb,   -- [["1. Yazılı","85"], ["1. Performans","90"], …]
+  average     text default '',
+  status      text default '',
+  user_id     uuid references auth.users(id) on delete set null,   -- bağlı öğrenci hesabı
+  updated_at  timestamptz not null default now()
+);
+create index if not exists grades_user_idx on public.grades (user_id);
+
 create table if not exists public.settings (        -- ör. öğrenciler arası mesajlaşma açık/kapalı
   id           int primary key default 1 check (id = 1),
   student_chat boolean not null default false
@@ -166,6 +178,7 @@ alter table public.assignments enable row level security;
 alter table public.submissions enable row level security;
 alter table public.messages    enable row level security;
 alter table public.settings    enable row level security;
+alter table public.grades      enable row level security;
 
 -- profiles: kendisi + öğretmen görür
 drop policy if exists profiles_select on public.profiles;
@@ -213,6 +226,14 @@ drop policy if exists settings_select on public.settings;
 create policy settings_select on public.settings for select to authenticated using (true);
 drop policy if exists settings_teacher on public.settings;
 create policy settings_teacher on public.settings for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- grades: öğrenci YALNIZCA kendi hesabına bağlı not satırını görür; öğretmen yönetir
+drop policy if exists grades_select on public.grades;
+create policy grades_select on public.grades for select to authenticated
+  using (public.is_teacher() or user_id = auth.uid());
+drop policy if exists grades_teacher on public.grades;
+create policy grades_teacher on public.grades for all to authenticated
   using (public.is_teacher()) with check (public.is_teacher());
 
 -- assignments: öğretmen yönetir; öğrenci yalnızca kendisine atananları görür

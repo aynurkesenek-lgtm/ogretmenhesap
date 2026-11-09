@@ -22,7 +22,7 @@
         { key: "classes", label: "Girdiğim sınıflar", placeholder: "ör. 5-A, 6-B, 7-C" },
       ],
       todoTitle: "Yapılacaklar", todoPlaceholder: "ör. 6-B sınav kâğıtlarını oku",
-      tabs: [["panel", "🏠 Panel"], ["planlar", "📚 Planlarım"], ["ogrenciler", "👥 Öğrenciler"], ["odevler", "📝 Ödevler"], ["mesajlar", "💬 Mesajlar"], ["uygulamalar", "📱 Uygulamalarım"]],
+      tabs: [["panel", "🏠 Panel"], ["planlar", "📚 Planlarım"], ["ogrenciler", "👥 Öğrenciler"], ["odevler", "📝 Ödevler"], ["notlar", "📊 Notlar"], ["mesajlar", "💬 Mesajlar"], ["uygulamalar", "📱 Uygulamalarım"]],
     },
     student: {
       label: "Öğrenci", icon: "🧑‍🎓",
@@ -33,10 +33,10 @@
         { key: "school", label: "Okul" },
       ],
       todoTitle: "Yapılacaklarım", todoPlaceholder: "ör. Matematik s. 45-46",
-      tabs: [["panel", "🏠 Panel"], ["odevler", "📝 Ödevlerim"], ["mesajlar", "💬 Mesajlar"], ["uygulamalar", "📱 Uygulamalarım"]],
+      tabs: [["panel", "🏠 Panel"], ["odevler", "📝 Ödevlerim"], ["notlar", "📊 Notlarım"], ["mesajlar", "💬 Mesajlar"], ["uygulamalar", "📱 Uygulamalarım"]],
     },
   };
-  const PAGE_NAMES = { panel: "Panel", planlar: "Planlarım", ogrenciler: "Öğrenciler", ogrenci: "Öğrenci profili", odevler: "Ödevler", odev: "Ödev", mesajlar: "Mesajlar", uygulamalar: "Uygulamalarım", oyunlar: "Uygulamalarım", oyun: "Oyun", profil: "Bilgilerim" };
+  const PAGE_NAMES = { panel: "Panel", planlar: "Planlarım", ogrenciler: "Öğrenciler", ogrenci: "Öğrenci profili", odevler: "Ödevler", odev: "Ödev", notlar: "Notlar", mesajlar: "Mesajlar", uygulamalar: "Uygulamalarım", oyunlar: "Uygulamalarım", oyun: "Oyun", profil: "Bilgilerim" };
   const ACT = {
     giris: { icon: "🔑", label: "Giriş" }, sayfa: { icon: "📄", label: "Sayfa" }, oyun: { icon: "🎮", label: "Oyun" },
     site: { icon: "🌐", label: "Site" }, teslim: { icon: "📤", label: "Ödev teslimi" },
@@ -698,7 +698,8 @@
 
   async function viewStudent(token, sid) {
     app.innerHTML = `<p class="muted center">Yükleniyor…</p>`;
-    const [s, assignments, subs, acts] = await Promise.all([B.getStudent(sid), B.listAssignments(), B.listSubmissions(), B.listActivity(sid)]);
+    const [s, assignments, subs, acts, allGrades] = await Promise.all([B.getStudent(sid), B.listAssignments(), B.listSubmissions(), B.listActivity(sid), B.listGrades()]);
+    const myGrade = allGrades.find((g) => g.userId === sid);
     if (!live(token)) return;
     if (!s) { app.innerHTML = `<div class="card narrow"><p>Öğrenci bulunamadı.</p><a class="btn" href="#/ogrenciler">Geri</a></div>`; return; }
     const mine = assignments.filter((a) => a.assignees.includes(sid));
@@ -741,6 +742,7 @@
               : `<tr><td colspan="4" class="muted">Atanmış ödev yok.</td></tr>`}
           </tbody></table></div>
         </section>
+        <div class="col-12">${myGrade ? gradeCard(myGrade, "📊 Notları") : `<section class="card"><h2>📊 Notları</h2><p class="muted">Not çizelgesinde bu hesaba bağlı satır yok. <a href="#/notlar">Notlar</a> sayfasından bağlayabilirsiniz.</p></section>`}</div>
         <section class="card col-12">
           <div class="row wrap" style="justify-content:space-between">
             <h2 style="margin:0">🕓 Etkinlik geçmişi <span class="hint">(yalnızca öğretmen görür)</span></h2>
@@ -944,6 +946,210 @@
       if (!confirm("Ödev ve tüm teslimleri silinecek. Emin misiniz?")) return;
       try { await B.deleteAssignment(aid); go("#/odevler"); } catch (e) { alert(e.message); }
     });
+  }
+
+  /* ================= Notlar ================= */
+  function parseCSV(text) {
+    const rows = []; let row = [], cell = "", q = false;
+    const t = String(text || "").replace(/^﻿/, "");
+    const sep = !/,/.test(t.split("\n")[0]) && /\t/.test(t.split("\n")[0]) ? "\t" : (/;/.test(t.split("\n")[0]) && !/,/.test(t.split("\n")[0]) ? ";" : ",");
+    for (let i = 0; i < t.length; i++) {
+      const c = t[i];
+      if (q) {
+        if (c === '"' && t[i + 1] === '"') { cell += '"'; i++; }
+        else if (c === '"') q = false;
+        else cell += c;
+      } else if (c === '"') q = true;
+      else if (c === sep) { row.push(cell); cell = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && t[i + 1] === "\n") i++;
+        row.push(cell); rows.push(row); row = []; cell = "";
+      } else cell += c;
+    }
+    if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter((r) => r.some((x) => String(x).trim() !== ""));
+  }
+
+  // Not çizelgesi satırlarını ortak biçime çevirir. Sütunlar başlık adlarından tanınır.
+  function rowsToGrades(table) {
+    if (table.length < 2) fail("Tabloda başlık satırı ve en az bir öğrenci satırı olmalı.");
+    const head = table[0].map((h) => String(h).trim());
+    const key = (h) => normUser(h).replace(/\s+/g, " ");
+    const find = (...names) => head.findIndex((h) => names.some((n) => key(h) === n || key(h).startsWith(n)));
+    const iNo = find("ogrenci no", "okul no", "numara", "no");
+    const iAd = find("adi", "ad");
+    const iSoyad = find("soyadi", "soyad");
+    const iFull = find("adi soyadi", "ad soyad");
+    const iAvg = find("ortalama");
+    const iStatus = find("durum");
+    const iSira = find("sira no", "sira");
+    if (iNo < 0) fail("Tabloda \"Öğrenci No\" sütunu bulunamadı.");
+    const special = new Set([iNo, iAd, iSoyad, iFull, iAvg, iStatus, iSira].filter((i) => i >= 0));
+    const scoreCols = head.map((h, i) => ({ h, i })).filter((c) => !special.has(c.i) && c.h);
+    const out = [];
+    const seen = new Set();
+    for (const r of table.slice(1)) {
+      const schoolNo = String(r[iNo] || "").trim();
+      if (!schoolNo || seen.has(schoolNo)) continue;
+      seen.add(schoolNo);
+      let first = iAd >= 0 && iAd !== iFull ? String(r[iAd] || "").trim() : "";
+      let last = iSoyad >= 0 ? String(r[iSoyad] || "").trim() : "";
+      if (!first && iFull >= 0) first = String(r[iFull] || "").trim();
+      out.push({
+        schoolNo, firstName: first, lastName: last,
+        scores: scoreCols.map((c) => [c.h, String(r[c.i] == null ? "" : r[c.i]).trim()]),
+        average: iAvg >= 0 ? String(r[iAvg] || "").trim() : "",
+        status: iStatus >= 0 ? String(r[iStatus] || "").trim() : "",
+      });
+    }
+    if (!out.length) fail("Öğrenci satırı bulunamadı.");
+    return out;
+  }
+
+  const toNum = (v) => { const n = parseFloat(String(v || "").replace(",", ".")); return isFinite(n) ? n : null; };
+  function gradeAverage(g) {
+    if (toNum(g.average) != null) return { value: toNum(g.average), computed: false };
+    const nums = g.scores.map(([, v]) => toNum(v)).filter((n) => n != null);
+    return nums.length ? { value: Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 100) / 100, computed: true } : null;
+  }
+  const fmtNum = (n) => (n == null ? "" : String(n).replace(".", ","));
+  function sheetCsvUrl(link) {
+    const m = /\/spreadsheets\/d\/([\w-]+)/.exec(link || "");
+    if (!m) return "";
+    const gid = /[#&?]gid=(\d+)/.exec(link || "");
+    return `https://docs.google.com/spreadsheets/d/${m[1]}/gviz/tq?tqx=out:csv${gid ? "&gid=" + gid[1] : ""}`;
+  }
+
+  async function viewGrades(token) {
+    app.innerHTML = `<p class="muted center">Yükleniyor…</p>`;
+    const [d, grades0, students] = await Promise.all([B.getData(me.uid), B.listGrades(), B.listStudents()]);
+    if (!live(token)) return;
+    let grades = grades0.sort((a, b) => (toNum(a.schoolNo) ?? 1e9) - (toNum(b.schoolNo) ?? 1e9) || a.schoolNo.localeCompare(b.schoolNo));
+    const queueSave = makeSaver(d);
+    const cols = [];
+    grades.forEach((g) => g.scores.forEach(([h]) => { if (!cols.includes(h)) cols.push(h); }));
+    const linkedIds = new Set(grades.map((g) => g.userId).filter(Boolean));
+    const avgs = grades.map(gradeAverage).filter(Boolean).map((a) => a.value);
+    const classAvg = avgs.length ? Math.round((avgs.reduce((a, b) => a + b, 0) / avgs.length) * 100) / 100 : null;
+    const studentOpt = (g) => `<option value="">— bağlı değil —</option>` + students
+      .sort((a, b) => nameOf(a).localeCompare(nameOf(b), "tr"))
+      .map((s) => `<option value="${esc(s.uid)}" ${g.userId === s.uid ? "selected" : ""} ${linkedIds.has(s.uid) && g.userId !== s.uid ? "disabled" : ""}>${esc(nameOf(s))} (@${esc(s.username)}${s.profile.number ? " · No " + esc(s.profile.number) : ""})</option>`).join("");
+
+    app.innerHTML = `
+      <div class="welcome"><div><h1>📊 Notlar</h1>
+        <span class="muted">Google Tablosundaki not çizelgesini aktarın; her öğrenci yalnızca kendi hesabına bağlı notları görür.</span>
+        <span class="saved" id="save-status"></span></div></div>
+      <div class="stats">
+        <div class="stat card"><span class="stat-ic">👥</span><span class="stat-n">${grades.length}</span><span class="stat-l">Çizelgedeki öğrenci</span></div>
+        <div class="stat card"><span class="stat-ic">🔗</span><span class="stat-n">${grades.filter((g) => g.userId).length}/${grades.length}</span><span class="stat-l">Hesaba bağlı</span></div>
+        <div class="stat card"><span class="stat-ic">⭐</span><span class="stat-n">${classAvg == null ? "—" : fmtNum(classAvg)}</span><span class="stat-l">Sınıf ortalaması</span></div>
+        <div class="stat card"><span class="stat-ic">🕓</span><span class="stat-n" style="font-size:1rem">${d.gradeSyncedAt ? fmtStamp(d.gradeSyncedAt) : "—"}</span><span class="stat-l">Son güncelleme</span></div>
+      </div>
+      <section class="card">
+        <h2>🔗 Google Tablosu bağlantısı</h2>
+        <form id="f-sheet" class="row wrap">
+          <input id="sheet-url" name="url" type="url" placeholder="https://docs.google.com/spreadsheets/d/…" value="${esc(d.gradeSheet)}" style="flex:3 1 280px">
+          <button class="btn" type="submit">🔄 Tablodan güncelle</button>
+          ${safeUrl(d.gradeSheet) ? `<a class="btn ghost" href="${esc(safeUrl(d.gradeSheet))}" target="_blank" rel="noopener">Tabloyu aç ↗</a>` : ""}
+        </form>
+        <p class="error" id="err-sheet"></p>
+        <p class="hint">Bağlantı yalnızca sizin hesabınızda saklanır. Notları tabloda değiştirdikten sonra "Tablodan güncelle"ye basın. Tablo "Bağlantıya sahip olan herkes görüntüleyebilir" olarak paylaşılmış olmalıdır; paylaşımı kısıtlamak isterseniz aşağıdaki yapıştırma yöntemini kullanın.</p>
+        <details>
+          <summary>📋 Yapıştırarak içe aktar (tablo paylaşılmadan)</summary>
+          <p class="hint">Google Tablosunda başlık satırı dahil tüm hücreleri seçip kopyalayın (Ctrl+C), aşağıya yapıştırın.</p>
+          <form id="f-paste">
+            <textarea id="paste-area" class="short" placeholder="Sıra No	Öğrenci No	Adı	Soyadı	1. Yazılı	…"></textarea>
+            <button class="btn ghost" type="submit">İçe aktar</button>
+            <span class="error" id="err-paste"></span>
+          </form>
+        </details>
+      </section>
+      <section class="card" style="margin-top:16px">
+        <h2>📋 Not çizelgesi</h2>
+        ${grades.length ? `<div class="table-wrap"><table class="data grades">
+          <thead><tr><th>No</th><th>Ad Soyad</th>${cols.map((c) => `<th>${esc(c)}</th>`).join("")}<th>Ortalama</th><th>Durum</th><th>Öğrenci hesabı</th></tr></thead>
+          <tbody>${grades.map((g) => {
+            const a = gradeAverage(g);
+            const map = Object.fromEntries(g.scores);
+            return `<tr>
+              <td>${esc(g.schoolNo)}</td>
+              <td><strong>${esc(g.firstName)} ${esc(g.lastName)}</strong></td>
+              ${cols.map((c) => `<td class="num">${esc(map[c] || "—")}</td>`).join("")}
+              <td class="num"><strong>${a ? fmtNum(a.value) : "—"}</strong>${a && a.computed ? `<span class="hint" title="Tabloda ortalama boş; girilen notlardan hesaplandı"> *</span>` : ""}</td>
+              <td>${esc(g.status || "—")}</td>
+              <td><select data-link="${esc(g.schoolNo)}" aria-label="${esc(g.firstName)} için öğrenci hesabı">${studentOpt(g)}</select></td>
+            </tr>`;
+          }).join("")}</tbody></table></div>
+          <p class="hint">* Tabloda ortalama boşsa girilen notların ortalaması gösterilir. Okul numarası, öğrencinin "Bilgilerim"deki numarasıyla eşleşen hesaplar otomatik bağlanır; diğerlerini listeden seçin.</p>`
+          : `<p class="muted">Henüz not çizelgesi aktarılmadı. Yukarıya Google Tablosu bağlantısını yapıştırıp "Tablodan güncelle"ye basın.</p>`}
+      </section>`;
+
+    async function importRows(rows) {
+      await B.saveGrades(rows);
+      // Okul numarası eşleşen kayıtlı öğrencileri otomatik bağla
+      const fresh = await B.listGrades();
+      const used = new Set(fresh.map((g) => g.userId).filter(Boolean));
+      for (const g of fresh) {
+        if (g.userId) continue;
+        const st = students.find((s) => String(s.profile.number || "").trim() === g.schoolNo && !used.has(s.uid));
+        if (st) { await B.linkGrade(g.schoolNo, st.uid); used.add(st.uid); }
+      }
+      d.gradeSyncedAt = new Date().toISOString();
+      queueSave(0);
+      await runFlush();
+      render();
+    }
+    bindForm($("#f-sheet"), $("#err-sheet"), async (fd) => {
+      const link = String(fd.get("url") || "").trim();
+      const url = sheetCsvUrl(link);
+      if (!url) fail("Geçerli bir Google Tablolar bağlantısı yapıştırın (docs.google.com/spreadsheets/d/…).");
+      d.gradeSheet = link; queueSave(0);
+      let text;
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error(res.status);
+        text = await res.text();
+      } catch (e) { fail("Tablo okunamadı. Tablonun \"Bağlantıya sahip olan herkes\" ile paylaşıldığından emin olun ya da yapıştırma yöntemini kullanın."); }
+      if (/^\s*</.test(text)) fail("Tablo okunamadı (paylaşım kısıtlı olabilir). Yapıştırma yöntemini deneyin.");
+      await importRows(rowsToGrades(parseCSV(text)));
+    });
+    bindForm($("#f-paste"), $("#err-paste"), async () => {
+      const text = $("#paste-area").value;
+      if (!text.trim()) fail("Önce tablodan kopyaladığınız hücreleri yapıştırın.");
+      await importRows(rowsToGrades(parseCSV(text)));
+    });
+    app.querySelectorAll("select[data-link]").forEach((sel) => sel.addEventListener("change", async () => {
+      sel.disabled = true;
+      try { await B.linkGrade(sel.dataset.link, sel.value || null); render(); }
+      catch (e) { alert(e.message); sel.disabled = false; }
+    }));
+  }
+
+  function gradeCard(g, title) {
+    const a = gradeAverage(g);
+    return `
+      <section class="card">
+        <h2>${title}</h2>
+        <div class="grade-tiles">
+          ${g.scores.map(([h, v]) => `<div class="grade-tile"><span class="gt-l">${esc(h)}</span><span class="gt-n">${esc(v || "—")}</span></div>`).join("")}
+          <div class="grade-tile strong"><span class="gt-l">Ortalama${a && a.computed ? " *" : ""}</span><span class="gt-n">${a ? fmtNum(a.value) : "—"}</span></div>
+          ${g.status ? `<div class="grade-tile"><span class="gt-l">Durum</span><span class="gt-n" style="font-size:1rem">${esc(g.status)}</span></div>` : ""}
+        </div>
+        ${a && a.computed ? `<p class="hint">* Girilen notlardan hesaplanan ortalama.</p>` : ""}
+        ${g.updatedAt ? `<p class="hint">Son güncelleme: ${fmtStamp(g.updatedAt)}</p>` : ""}
+      </section>`;
+  }
+
+  async function viewMyGrades(token) {
+    app.innerHTML = `<p class="muted center">Yükleniyor…</p>`;
+    const grades = await B.listGrades();
+    if (!live(token)) return;
+    const g = grades[0];
+    app.innerHTML = `
+      <div class="welcome"><div><h1>📊 Notlarım</h1><span class="muted">Öğretmeninin girdiği yazılı ve performans notların.</span></div></div>
+      ${g ? gradeCard(g, `${esc(g.firstName)} ${esc(g.lastName)} · No ${esc(g.schoolNo)}`)
+        : `<div class="card"><p>Notların henüz hesabına bağlanmadı.</p>
+           <p class="muted">Okul numaranı <a href="#/profil">Bilgilerim</a> sayfasına yaz ve öğretmenine haber ver; öğretmenin notları güncellediğinde hesabına bağlanacak.</p></div>`}`;
   }
 
   /* ================= Mesajlar ================= */
@@ -1253,6 +1459,7 @@
           case "ogrenci": await viewStudent(token, arg); break;
           case "odevler": await viewAssignments(token); break;
           case "odev": await viewAssignment(token, arg); break;
+          case "notlar": await (isTeacher() ? viewGrades(token) : viewMyGrades(token)); break;
           case "mesajlar": await viewMessages(token, arg); break;
           case "uygulamalar": case "oyunlar": await viewResources(token); break;
           case "oyun": if (arg === "drive") viewDriveGames(); else viewMathGame(token); break;

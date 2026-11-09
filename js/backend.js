@@ -34,13 +34,15 @@
       yearPlan: Array.isArray(x.yearPlan) ? x.yearPlan : [],
       modules: Array.isArray(x.modules) ? x.modules : [],
       daily: Array.isArray(x.daily) ? x.daily : [],
+      gradeSheet: String(x.gradeSheet || ""),
+      gradeSyncedAt: x.gradeSyncedAt || null,
     };
   }
 
   /* ============================ YEREL (DEMO) ============================ */
   function LocalBackend() {
     const KEY = "ogretmenhesap.v4";
-    const blank = () => ({ users: [], data: {}, activity: [], resources: [], assignments: [], submissions: [], messages: [], settings: { studentChat: false }, session: null });
+    const blank = () => ({ users: [], data: {}, activity: [], resources: [], assignments: [], submissions: [], messages: [], grades: [], settings: { studentChat: false }, session: null });
     let s = null;
     try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) { /* erişilemez */ }
     if (!s || !Array.isArray(s.users)) s = blank();
@@ -117,6 +119,7 @@
         delete s.data[id];
         s.activity = s.activity.filter((a) => a.uid !== id);
         s.submissions = s.submissions.filter((x) => x.uid !== id);
+        s.grades.forEach((g) => { if (g.userId === id) g.userId = null; });
         persist();
       },
       async directory() { needLogin(); return s.users.map((u) => ({ uid: u.uid, username: u.username, role: u.role, name: (u.profile || {}).name || "" })); },
@@ -189,6 +192,23 @@
       },
       async deleteMessage(id) { needTeacher(); s.messages = s.messages.filter((m) => m.id !== id); persist(); },
 
+      /* Notlar */
+      async listGrades() {
+        const u = needLogin();
+        return (u.role === "teacher" ? s.grades : s.grades.filter((g) => g.userId === u.uid)).map((g) => ({ ...g }));
+      },
+      async saveGrades(rows) {
+        needTeacher();
+        const prev = Object.fromEntries(s.grades.map((g) => [g.schoolNo, g]));
+        s.grades = rows.map((r) => ({ ...r, userId: prev[r.schoolNo] ? prev[r.schoolNo].userId : null, updatedAt: nowISO() }));
+        persist();
+      },
+      async linkGrade(schoolNo, userId) {
+        needTeacher();
+        const g = s.grades.find((x) => x.schoolNo === schoolNo); if (!g) fail("Not satırı bulunamadı.");
+        g.userId = userId || null; persist();
+      },
+
       /* Ayarlar */
       async getSettings() { return Object.assign({ studentChat: false }, s.settings); },
       async saveSettings(x) { needTeacher(); s.settings = Object.assign({}, s.settings, x); persist(); },
@@ -254,6 +274,7 @@
     const mapRes = (x) => ({ id: x.id, title: x.title, url: x.url, kind: x.kind, desc: x.description || "", visible: x.visible !== false, createdAt: iso(x.created_at) });
     const mapAsg = (x) => ({ id: x.id, title: x.title, body: x.body || "", due: x.due || "", link: x.link || "", assignees: x.assignees || [], allStudents: !!x.all_students, createdAt: iso(x.created_at) });
     const mapSub = (x) => ({ id: x.id, assignmentId: x.assignment_id, uid: x.user_id, username: x.username, text: x.text || "", link: x.link || "", status: x.status, score: x.score == null ? null : Number(x.score), feedback: x.feedback || "", submittedAt: iso(x.submitted_at), gradedAt: iso(x.graded_at) });
+    const mapGrade = (x) => ({ schoolNo: x.school_no, firstName: x.first_name || "", lastName: x.last_name || "", scores: Array.isArray(x.scores) ? x.scores : [], average: x.average || "", status: x.status || "", userId: x.user_id || null, updatedAt: iso(x.updated_at) });
     const mapMsg = (x) => ({ id: x.id, from: x.from_id, to: x.to_id, participants: x.participants || [], convId: x.conv_id, text: x.text, at: iso(x.at) });
 
     return {
@@ -301,6 +322,7 @@
           run(sb.from("activity").delete().eq("user_id", id)),
           run(sb.from("submissions").delete().eq("user_id", id)),
         ]);
+        await run(sb.from("grades").update({ user_id: null }).eq("user_id", id));
         await run(sb.from("profiles").delete().eq("id", id));
       }),
       directory: wrap(async () => (await run(sb.rpc("get_directory"))).map((x) => ({ uid: x.id, username: x.username, role: x.role, name: x.name || "" }))),
@@ -343,6 +365,23 @@
         from_id: current.uid, to_id: to, participants: [current.uid, to].sort(), conv_id: convIdOf(current.uid, to), text,
       }))),
       deleteMessage: wrap((id) => run(sb.from("messages").delete().eq("id", id))),
+
+      /* Notlar */
+      listGrades: wrap(async () => (await run(sb.from("grades").select("*"))).map(mapGrade)),
+      saveGrades: wrap(async (rows) => {
+        needTeacher();
+        const existing = (await run(sb.from("grades").select("school_no"))).map((x) => x.school_no);
+        const keep = new Set(rows.map((r) => r.schoolNo));
+        if (rows.length) {
+          await run(sb.from("grades").upsert(rows.map((r) => ({
+            school_no: r.schoolNo, first_name: r.firstName, last_name: r.lastName, scores: r.scores,
+            average: r.average, status: r.status, updated_at: nowISO(),
+          }))));
+        }
+        const gone = existing.filter((n) => !keep.has(n));
+        for (const n of gone) await run(sb.from("grades").delete().eq("school_no", n));
+      }),
+      linkGrade: wrap((schoolNo, userId) => run(sb.from("grades").update({ user_id: userId || null }).eq("school_no", schoolNo))),
 
       /* Ayarlar */
       getSettings: wrap(async () => { const r = await run(sb.from("settings").select("*").eq("id", 1)); return { studentChat: !!(r[0] && r[0].student_chat) }; }),

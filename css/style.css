@@ -270,3 +270,13 @@ details summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
 .module a.btn { margin-top: auto; align-self: flex-start; }
 .drive-frame { padding: 0; overflow: hidden; }
 .drive-frame iframe { display: block; width: 100%; height: 70vh; min-height: 420px; border: 0; background: #fff; }
+
+/* Notlar */
+table.grades td.num { text-align: center; font-variant-numeric: tabular-nums; }
+table.grades select { min-width: 190px; padding: 6px 8px; font-size: .85rem; }
+.grade-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.grade-tile { background: var(--bg); border-radius: 12px; padding: 12px; display: grid; gap: 4px; }
+.grade-tile.strong { background: var(--role); color: #fff; }
+.grade-tile.strong .gt-l { color: rgba(255, 255, 255, .85); }
+.gt-l { font-size: .82rem; color: var(--muted); }
+.gt-n { font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }

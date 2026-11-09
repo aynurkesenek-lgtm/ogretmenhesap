@@ -11,6 +11,7 @@
 | Planlarım | Yıllık plan (CSV indirme), ders modülleri, günlük aktiviteler | — |
 | Öğrenciler | Tüm öğrenciler, profil, teslim ve puan özeti, **etkinlik geçmişi** | — |
 | Ödevler | Tüm ya da seçili öğrencilere gönderme, kopyalayarak haftalık tekrar, puanlama, **düzeltme için geri gönderme** | Ödevi görme, cevap ve bağlantı gönderme, geri bildirimi görme |
+| Notlar | Google Tablosundaki not çizelgesini bağlantıyla veya yapıştırarak aktarma, satırları öğrenci hesaplarına bağlama (okul numarası eşleşirse otomatik), sınıf ortalaması | **Notlarım**: yalnızca kendi yazılı/performans notları, ortalama ve durum |
 | Mesajlar | Öğrencilerle yazışma, **öğrenciler arası tüm yazışmaları görme**, mesaj silme, öğrenciler arası mesajlaşmayı açma/kapama | Öğretmenle ve izin varsa diğer öğrencilerle yazışma |
 | Uygulamalarım | Online uygulama, Drive, oyun ve site ekleme; "öğrenciler görebilsin / yalnızca ben" seçimi | Online uygulamaları tek tıkla açma, Drive uygulamaları için "Drive'da aç" bağlantısı (açılanlar geçmişe kaydedilir), yerleşik "Hızlı Matematik" oyunu |
 
@@ -35,6 +36,7 @@
 - İlk girişten sonra öğretmen şifresini **Bilgilerim → Şifre değiştir** bölümünden güçlü bir şifreyle değiştirin.
 - RLS kuralları: öğrenci yalnızca kendi verisini, kendisine atanan ödevleri ve taraf olduğu mesajları görür; puan veremez; etkinlik geçmişini okuyamaz. Öğretmen hepsini görür.
 - Öğrencilerden T.C. kimlik no gibi hassas kişisel veri istemeyin (KVKK).
+- Not tablosu bağlantısı koda yazılmaz; yalnızca öğretmenin veritabanındaki özel verisinde saklanır. "Bağlantıya sahip olan herkes" paylaşımı, bağlantıyı bilen herkesin notları görmesine izin verir; paylaşımı kısıtlayıp **yapıştırarak içe aktar** yöntemini kullanmak daha güvenlidir.
 
 ## Dosyalar
 
