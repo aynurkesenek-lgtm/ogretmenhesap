@@ -10,8 +10,8 @@
 //  Alanlar boş kaldığı sürece site DEMO MODUNDA çalışır.
 // ============================================================
 
-export const SUPABASE_URL = "https://pokvztbgcmlwytxunles.supabase.co;
-export const SUPABASE_ANON_KEY = "sb_publishable_dNNjfeF1ObADXxj24LQWag_eILuc5wQ;
+export const SUPABASE_URL = "https://pokvztbgcmlwytxunles.supabase.co";
+export const SUPABASE_ANON_KEY = "sb_publishable_dNNjfeF1ObADXxj24LQWag_eILuc5wQ";
 
 // Öğretmen ve öğrenciler kullanıcı adıyla girer; arka planda
 // "kullaniciadi@" + bu alan adı kullanılır (kurulum.sql ile aynı olmalı).
