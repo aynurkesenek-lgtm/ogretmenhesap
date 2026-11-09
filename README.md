@@ -1,39 +1,56 @@
 # 📘 Öğretmen Hesap
 
-Öğretmenler ve öğrenciler için tarayıcıda çalışan, günlük kullanım paneli.
+Öğretmen ve öğrenci paneli: ödev gönderme, teslim alma, puanlama, mesajlaşma, öğrenci takibi, planlar ve günlük kullanım araçları. Derleme gerektirmez; GitHub Pages'te çalışır, veriler **Supabase** veritabanında tutulur.
 
-## Özellikler
+## Roller ve özellikler
 
-| Ekran | Öğretmen | Öğrenci |
+| Özellik | Öğretmen (tek yönetici: `rasyonelx`) | Öğrenci |
 |---|---|---|
-| İlk giriş / kayıt | Ad, okul, branş, sınıflar, iletişim | Ad, okul, sınıf/şube, numara, sınıf öğretmeni, veli iletişim |
-| Bilgilerim kartı | ✔ (düzenlenebilir) | ✔ (düzenlenebilir) |
-| Bugünkü dersler | Programdan otomatik, o anki ders vurgulu | Aynı |
-| Haftalık ders programı | 5 gün × 8 ders, saatler düzenlenebilir | Aynı |
-| Yapılacaklar / Ödevlerim | Son tarihli liste, geciken işler kırmızı | Aynı |
-| Yaklaşan tarihler | Sınav, toplantı, etkinlik geri sayımı | Aynı |
-| Notlarım | Otomatik kaydedilen not alanı | Aynı |
-| Yedekle / Yükle | JSON dosyası | Aynı |
+| Giriş / kayıt | Hazır hesap | Kullanıcı adı + şifre ile kendisi kayıt olur |
+| Panel | Özet sayılar, ders programı, yapılacaklar, notlar, yaklaşan tarihler | Aynı araçlar + bekleyen ödev / puan özeti |
+| Planlarım | Yıllık plan (CSV indirme), ders modülleri, günlük aktiviteler | — |
+| Öğrenciler | Tüm öğrenciler, profil, teslim ve puan özeti, **etkinlik geçmişi** | — |
+| Ödevler | Tüm ya da seçili öğrencilere gönderme, kopyalayarak haftalık tekrar, puanlama, **düzeltme için geri gönderme** | Ödevi görme, cevap ve bağlantı gönderme, geri bildirimi görme |
+| Mesajlar | Öğrencilerle yazışma, **öğrenciler arası tüm yazışmaları görme**, mesaj silme, öğrenciler arası mesajlaşmayı açma/kapama | Öğretmenle ve izin varsa diğer öğrencilerle yazışma |
+| Oyun & Siteler | Bağlantı ekleme/silme | Panel üzerinden açma (geçmişe kaydedilir), yerleşik "Hızlı Matematik" oyunu |
 
-Aynı cihazda birden fazla öğretmen ve öğrenci hesabı açılabilir; her hesap PIN ile ayrılır.
+**Etkinlik geçmişi** (yalnızca öğretmen görür): girişler, açılan sayfalar, panel üzerinden açılan oyun ve siteler, oyun skorları, ödev teslimleri. Tarayıcı güvenliği gereği sistem dışında ziyaret edilen siteler izlenemez. Öğrencilere, etkinliklerinin ve mesajlarının öğretmen tarafından görülebildiği panelde açıkça bildirilir.
 
-## Veri ve gizlilik
+## Supabase kurulumu
 
-- Sunucu **yoktur**. Tüm bilgiler yalnızca kullanılan cihazın tarayıcısında (`localStorage`) saklanır; başka cihazda görünmez.
-- Tarayıcı verisi temizlenirse bilgiler silinir → düzenli olarak **Yedekle** kullanın.
-- PIN, ortak cihazda hesapları ayırmak içindir; gerçek bir güvenlik katmanı değildir. Öğrencilerin T.C. kimlik no gibi hassas kişisel verileri girilmemelidir (KVKK).
+1. Sitede soldaki **🗄️ SQL** butonuna tıklayın → **Kopyala** → Supabase **SQL Editor → New query** → yapıştırın → **Run**. (Dosya: `supabase/schema.sql`; tekrar çalıştırılabilir.)
+2. **Authentication → Sign In / Providers → Email**: "Confirm email" seçeneğini **kapatın** (kullanıcı adları gerçek e-posta değildir).
+3. **Authentication → Users → Add user**: `rasyonelx@ogretmenhesap.app` + öğretmen şifresi, "Auto Confirm User" işaretli. Bunu öğrenciler kayıt olmadan **önce** yapın.
+4. **Project Settings → API**: *Project URL* ve *anon / publishable* anahtarı `js/config.js` içine yazın:
+   ```js
+   supabase: { url: "https://PROJE-ID.supabase.co", anonKey: "..." },
+   ```
+   Bu anahtar tarayıcıda kullanılmak üzere tasarlanmıştır; veriler satır düzeyi güvenlik (RLS) kurallarıyla korunur. **`service_role` / `secret` anahtarını asla koda yazmayın veya paylaşmayın.**
+5. Bağlantı kurulunca `index.html` içindeki "GEÇİCİ" blok ve `js/setup.js` kaldırılacaktır.
 
-## Yerelde çalıştırma
+`supabase` ayarı boşken site **demo modunda** çalışır (veriler yalnızca o cihazdaki tarayıcıda).
 
-`index.html` dosyasını tarayıcıda açmanız yeterlidir. Ya da:
+## Güvenlik notları
+
+- İlk girişten sonra öğretmen şifresini **Bilgilerim → Şifre değiştir** bölümünden güçlü bir şifreyle değiştirin.
+- RLS kuralları: öğrenci yalnızca kendi verisini, kendisine atanan ödevleri ve taraf olduğu mesajları görür; puan veremez; etkinlik geçmişini okuyamaz. Öğretmen hepsini görür.
+- Öğrencilerden T.C. kimlik no gibi hassas kişisel veri istemeyin (KVKK).
+
+## Dosyalar
+
+| Dosya | İçerik |
+|---|---|
+| `index.html`, `css/style.css` | Sayfa iskeleti ve görünüm |
+| `js/config.js` | Supabase bağlantısı ve öğretmen kullanıcı adı |
+| `js/backend.js` | Veri altyapısı (Supabase + demo modu) |
+| `js/app.js` | Ekranlar ve yönlendirme |
+| `supabase/schema.sql` | Tablolar, fonksiyonlar ve RLS kuralları |
+| `js/setup.js` | Geçici SQL penceresi |
+
+## Yerelde çalıştırma ve yayınlama
 
 ```bash
 python3 -m http.server 8000
 ```
 
-## GitHub Pages'te yayınlama
-
-1. Bu dalı `main` dalına birleştirin.
-2. GitHub'da **Settings → Pages → Build and deployment → Source: GitHub Actions** seçin.
-3. `main`'e her gönderimde `.github/workflows/pages.yml` siteyi otomatik yayınlar.
-   Adres: `https://aynurkesenek-lgtm.github.io/ogretmenhesap/`
+GitHub Pages: dalı `main`'e birleştirin, **Settings → Pages → Source: GitHub Actions** seçin. Adres: `https://aynurkesenek-lgtm.github.io/ogretmenhesap/`
