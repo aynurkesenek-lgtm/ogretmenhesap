@@ -262,3 +262,9 @@ details summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
   background: #0f1420; color: #d8e1f2; padding: 14px; border-radius: 10px; overflow: auto; max-height: 50vh;
   font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre;
 }
+
+/* Uygulamalarım */
+.group-head { font-size: 1.05rem; margin: 22px 0 10px; }
+.module.app-online { border-top: 4px solid var(--role); }
+.module.app-drive { border-top: 4px solid #1fa463; }
+.module a.btn { margin-top: auto; align-self: flex-start; }

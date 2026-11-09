@@ -131,7 +131,10 @@
       async listActivity(id) { needTeacher(); return s.activity.filter((a) => !id || a.uid === id).sort(byDateDesc("at")); },
 
       /* Oyun ve site bağlantıları */
-      async listResources() { needLogin(); return s.resources.slice().sort(byDateDesc("createdAt")); },
+      async listResources() {
+        const u = needLogin();
+        return s.resources.filter((r) => u.role === "teacher" || r.visible !== false).sort(byDateDesc("createdAt"));
+      },
       async addResource(r) { needTeacher(); s.resources.push({ id: uid(), ...r, createdAt: nowISO() }); persist(); },
       async deleteResource(id) { needTeacher(); s.resources = s.resources.filter((r) => r.id !== id); persist(); },
 
@@ -248,7 +251,7 @@
 
     const mapStudent = (x) => ({ uid: x.id, username: x.username, role: x.role, profile: x.profile || {}, createdAt: iso(x.created_at), lastLogin: iso(x.last_login) });
     const mapAct = (x) => ({ id: x.id, uid: x.user_id, username: x.username, type: x.type, label: x.label, detail: x.detail, at: iso(x.at) });
-    const mapRes = (x) => ({ id: x.id, title: x.title, url: x.url, kind: x.kind, desc: x.description || "", createdAt: iso(x.created_at) });
+    const mapRes = (x) => ({ id: x.id, title: x.title, url: x.url, kind: x.kind, desc: x.description || "", visible: x.visible !== false, createdAt: iso(x.created_at) });
     const mapAsg = (x) => ({ id: x.id, title: x.title, body: x.body || "", due: x.due || "", link: x.link || "", assignees: x.assignees || [], allStudents: !!x.all_students, createdAt: iso(x.created_at) });
     const mapSub = (x) => ({ id: x.id, assignmentId: x.assignment_id, uid: x.user_id, username: x.username, text: x.text || "", link: x.link || "", status: x.status, score: x.score == null ? null : Number(x.score), feedback: x.feedback || "", submittedAt: iso(x.submitted_at), gradedAt: iso(x.graded_at) });
     const mapMsg = (x) => ({ id: x.id, from: x.from_id, to: x.to_id, participants: x.participants || [], convId: x.conv_id, text: x.text, at: iso(x.at) });
@@ -317,7 +320,7 @@
 
       /* Oyun ve site bağlantıları */
       listResources: wrap(async () => (await run(sb.from("resources").select("*").order("created_at", { ascending: false }))).map(mapRes)),
-      addResource: wrap((r) => run(sb.from("resources").insert({ title: r.title, url: r.url, kind: r.kind, description: r.desc || "" }))),
+      addResource: wrap((r) => run(sb.from("resources").insert({ title: r.title, url: r.url, kind: r.kind, description: r.desc || "", visible: r.visible !== false }))),
       deleteResource: wrap((id) => run(sb.from("resources").delete().eq("id", id))),
 
       /* Ödevler */

@@ -22,7 +22,7 @@
         { key: "classes", label: "Girdiğim sınıflar", placeholder: "ör. 5-A, 6-B, 7-C" },
       ],
       todoTitle: "Yapılacaklar", todoPlaceholder: "ör. 6-B sınav kâğıtlarını oku",
-      tabs: [["panel", "🏠 Panel"], ["planlar", "📚 Planlarım"], ["ogrenciler", "👥 Öğrenciler"], ["odevler", "📝 Ödevler"], ["mesajlar", "💬 Mesajlar"], ["oyunlar", "🎮 Oyun & Siteler"]],
+      tabs: [["panel", "🏠 Panel"], ["planlar", "📚 Planlarım"], ["ogrenciler", "👥 Öğrenciler"], ["odevler", "📝 Ödevler"], ["mesajlar", "💬 Mesajlar"], ["uygulamalar", "📱 Uygulamalarım"]],
     },
     student: {
       label: "Öğrenci", icon: "🧑‍🎓",
@@ -33,10 +33,10 @@
         { key: "school", label: "Okul" },
       ],
       todoTitle: "Yapılacaklarım", todoPlaceholder: "ör. Matematik s. 45-46",
-      tabs: [["panel", "🏠 Panel"], ["odevler", "📝 Ödevlerim"], ["mesajlar", "💬 Mesajlar"], ["oyunlar", "🎮 Oyun & Siteler"]],
+      tabs: [["panel", "🏠 Panel"], ["odevler", "📝 Ödevlerim"], ["mesajlar", "💬 Mesajlar"], ["uygulamalar", "📱 Uygulamalarım"]],
     },
   };
-  const PAGE_NAMES = { panel: "Panel", planlar: "Planlarım", ogrenciler: "Öğrenciler", ogrenci: "Öğrenci profili", odevler: "Ödevler", odev: "Ödev", mesajlar: "Mesajlar", oyunlar: "Oyun & Siteler", oyun: "Oyun", profil: "Bilgilerim" };
+  const PAGE_NAMES = { panel: "Panel", planlar: "Planlarım", ogrenciler: "Öğrenciler", ogrenci: "Öğrenci profili", odevler: "Ödevler", odev: "Ödev", mesajlar: "Mesajlar", uygulamalar: "Uygulamalarım", oyunlar: "Uygulamalarım", oyun: "Oyun", profil: "Bilgilerim" };
   const ACT = {
     giris: { icon: "🔑", label: "Giriş" }, sayfa: { icon: "📄", label: "Sayfa" }, oyun: { icon: "🎮", label: "Oyun" },
     site: { icon: "🌐", label: "Site" }, teslim: { icon: "📤", label: "Ödev teslimi" },
@@ -164,7 +164,7 @@
     document.body.dataset.role = me ? me.role : "";
     if (!me) return;
     $("#whoami").textContent = `${ROLES[me.role].icon} ${displayName()}`;
-    const active = { ogrenci: "ogrenciler", odev: "odevler", oyun: "oyunlar" }[page] || page || "panel";
+    const active = { ogrenci: "ogrenciler", odev: "odevler", oyun: "uygulamalar", oyunlar: "uygulamalar" }[page] || page || "panel";
     $("#tabs").innerHTML = ROLES[me.role].tabs
       .map(([k, l]) => `<a href="#/${k}" class="${k === active ? "active" : ""}">${l}</a>`).join("");
   }
@@ -1054,59 +1054,97 @@
     }, 8000);
   }
 
-  /* ================= Oyun & Siteler ================= */
+  /* ================= Uygulamalarım ================= */
+  const APP_KINDS = {
+    online: { icon: "🌐", label: "Online uygulama", group: "🌐 Online uygulamalar", open: "▶ Aç", log: "Online uygulama açtı: ", act: "site" },
+    drive: { icon: "📁", label: "Drive", group: "📁 Drive'daki uygulamalar", open: "📁 Drive'da aç", log: "Drive uygulaması açtı: ", act: "site" },
+    oyun: { icon: "🎮", label: "Oyun", group: "🎮 Oyunlar", open: "🎮 Oyna", log: "Oyun açtı: ", act: "oyun" },
+    site: { icon: "🔗", label: "Site", group: "🔗 Siteler", open: "↗ Aç", log: "Siteye girdi: ", act: "site" },
+  };
+  const isDriveUrl = (u) => /^https:\/\/(drive|docs)\.google\.com\//i.test(u);
+
   async function viewResources(token) {
     app.innerHTML = `<p class="muted center">Yükleniyor…</p>`;
     const list = await B.listResources();
     if (!live(token)) return;
     const T = isTeacher();
+    const visible = T ? list : list.filter((r) => r.visible !== false);
+    const groups = ["online", "drive", "oyun", "site"].map((k) => ({ k, items: visible.filter((r) => (APP_KINDS[r.kind] ? r.kind : "site") === k) }));
+    const card = (r) => {
+      const k = APP_KINDS[r.kind] || APP_KINDS.site;
+      return `
+        <article class="card module app-${esc(r.kind)}">
+          <div class="row" style="justify-content:space-between"><h3>${k.icon} ${esc(r.title)}</h3>
+            ${T ? `<button class="btn icon" data-del="${esc(r.id)}" aria-label="Sil" title="Sil">✕</button>` : ""}</div>
+          ${r.desc ? `<p class="muted">${esc(r.desc)}</p>` : ""}
+          <p class="hint">${k.label}${T ? (r.visible === false ? " · 🔒 Yalnızca ben" : " · 👥 Öğrenciler görebilir") : ""}</p>
+          ${r.kind === "drive"
+            ? `<a class="btn" href="${esc(safeUrl(r.url))}" target="_blank" rel="noopener" data-open="${esc(r.id)}">${k.open}</a>`
+            : `<button class="btn" data-open="${esc(r.id)}" type="button">${k.open}</button>`}
+        </article>`;
+    };
     app.innerHTML = `
-      <div class="welcome"><div><h1>🎮 Oyun & Siteler</h1>
-        <span class="muted">${T ? "Öğrencilerin kullanacağı oyun ve siteleri ekleyin. Öğrenciler bunları buradan açtığında geçmişlerine kaydedilir." : "Öğretmeninin önerdiği oyun ve siteler. (Buradan açtıkların öğretmenin tarafından görülebilir.)"}</span></div></div>
+      <div class="welcome"><div><h1>📱 Uygulamalarım</h1>
+        <span class="muted">${T ? "Online uygulamalar tek tıkla açılır; Drive'daki uygulamalar için Drive bağlantısı gösterilir. Öğrencilerin panelden açtıkları geçmişlerine kaydedilir." : "Öğretmeninin paylaştığı uygulamalar. (Buradan açtıkların öğretmenin tarafından görülebilir.)"}</span></div></div>
       ${T ? `<section class="card">
-        <h2>➕ Bağlantı ekle</h2>
+        <h2>➕ Uygulama ekle</h2>
         <form id="f-res" class="form-grid">
-          <div><label for="r-title">Başlık</label><input id="r-title" name="title" required placeholder="ör. PhET Kuvvet Simülasyonu"></div>
-          <div class="span-2"><label for="r-url">Adres (URL)</label><input id="r-url" name="url" type="url" required placeholder="https://…"></div>
-          <div><label for="r-kind">Tür</label><select id="r-kind" name="kind"><option value="oyun">🎮 Oyun</option><option value="site">🌐 Site</option></select></div>
+          <div><label for="r-kind">Tür</label><select id="r-kind" name="kind">
+            <option value="online">🌐 Online uygulama</option><option value="drive">📁 Drive</option><option value="oyun">🎮 Oyun</option><option value="site">🔗 Site</option></select></div>
+          <div><label for="r-title">Ad</label><input id="r-title" name="title" required placeholder="ör. Kesirler uygulaması"></div>
+          <div class="span-2"><label for="r-url" id="r-url-label">Adres (URL)</label><input id="r-url" name="url" type="url" required placeholder="https://…"></div>
           <div class="span-all"><label for="r-desc">Açıklama</label><input id="r-desc" name="desc" placeholder="Ne için kullanılacak? (isteğe bağlı)"></div>
+          <div class="span-all"><label class="check"><input type="checkbox" name="visible" checked> Öğrenciler görebilsin</label></div>
           <div class="span-all"><button class="btn" type="submit">Ekle</button><span class="error" id="err-res"></span></div>
         </form></section>` : ""}
-      <div class="module-grid" style="margin-top:16px">
-        <article class="card module builtin">
-          <h3>🧮 Hızlı Matematik</h3>
-          <p class="muted">Sitenin kendi oyunu · 10 soru, süre tutulur. Skorlar ${T ? "öğrencinin geçmişine" : "öğretmenine"} kaydedilir.</p>
-          <a class="btn" href="#/oyun/matematik">Oyna</a>
-        </article>
-        ${list.map((r) => `
-          <article class="card module">
-            <div class="row" style="justify-content:space-between"><h3>${r.kind === "oyun" ? "🎮" : "🌐"} ${esc(r.title)}</h3>
-              ${T ? `<button class="btn icon" data-del="${esc(r.id)}" aria-label="Sil" title="Sil">✕</button>` : ""}</div>
-            ${r.desc ? `<p class="muted">${esc(r.desc)}</p>` : ""}
-            <p class="hint">${esc(r.url)}</p>
-            <button class="btn" data-open="${esc(r.id)}" type="button">Aç ↗</button>
-          </article>`).join("")}
-      </div>`;
+      ${groups.filter((g) => g.items.length || (g.k === "oyun")).map((g) => `
+        <h2 class="group-head">${APP_KINDS[g.k].group}</h2>
+        <div class="module-grid">
+          ${g.k === "oyun" ? `<article class="card module builtin">
+            <h3>🧮 Hızlı Matematik</h3>
+            <p class="muted">Sitenin kendi oyunu · 10 soru, süre tutulur. Skorlar ${T ? "öğrencinin geçmişine" : "öğretmenine"} kaydedilir.</p>
+            <a class="btn" href="#/oyun/matematik">🎮 Oyna</a></article>` : ""}
+          ${g.items.map(card).join("")}
+        </div>`).join("")}
+      ${!visible.length && !T ? `<p class="muted">Öğretmenin henüz uygulama paylaşmadı.</p>` : ""}`;
+
+    if (T) {
+      const kindSel = $("#r-kind");
+      const setHint = () => {
+        const drive = kindSel.value === "drive";
+        $("#r-url-label").textContent = drive ? "Drive paylaşım bağlantısı" : "Adres (URL)";
+        $("#r-url").placeholder = drive ? "https://drive.google.com/…" : "https://…";
+      };
+      kindSel.addEventListener("change", setHint);
+      bindForm($("#f-res"), $("#err-res"), async (fd) => {
+        const r = {
+          title: String(fd.get("title") || "").trim(), url: String(fd.get("url") || "").trim(),
+          kind: APP_KINDS[fd.get("kind")] ? String(fd.get("kind")) : "online",
+          desc: String(fd.get("desc") || "").trim(), visible: fd.get("visible") === "on",
+        };
+        if (!r.title) fail("Uygulama adını yazın.");
+        if (!safeUrl(r.url)) fail("Adres http:// veya https:// ile başlamalı.");
+        if (r.kind === "drive" && !isDriveUrl(r.url) && !confirm("Bu bağlantı bir Google Drive adresine benzemiyor. Yine de eklensin mi?")) return;
+        await B.addResource(r);
+        render();
+      });
+    }
     app.addEventListener("click", onResClick);
     function onResClick(ev) {
       if (!live(token)) { app.removeEventListener("click", onResClick); return; }
-      const openId = ev.target.dataset.open, delId = ev.target.dataset.del;
-      if (openId) {
-        const r = list.find((x) => x.id === openId); const url = safeUrl(r && r.url); if (!url) return;
-        B.logActivity(r.kind === "oyun" ? "oyun" : "site", (r.kind === "oyun" ? "Oyun açtı: " : "Siteye girdi: ") + r.title, url);
-        window.open(url, "_blank", "noopener");
+      const opener = ev.target.closest("[data-open]");
+      const delId = ev.target.dataset.del;
+      if (opener) {
+        const r = list.find((x) => x.id === opener.dataset.open); const url = safeUrl(r && r.url);
+        if (!url) { ev.preventDefault(); return; }
+        const k = APP_KINDS[r.kind] || APP_KINDS.site;
+        B.logActivity(k.act, k.log + r.title, url);
+        if (opener.tagName !== "A") window.open(url, "_blank", "noopener");
       } else if (delId && T) {
-        if (!confirm("Bu bağlantı silinsin mi?")) return;
+        if (!confirm("Bu uygulama silinsin mi?")) return;
         B.deleteResource(delId).then(render).catch((e) => alert(e.message));
       }
     }
-    if (T) bindForm($("#f-res"), $("#err-res"), async (fd) => {
-      const r = { title: String(fd.get("title") || "").trim(), url: String(fd.get("url") || "").trim(), kind: fd.get("kind") === "site" ? "site" : "oyun", desc: String(fd.get("desc") || "").trim() };
-      if (!r.title) fail("Başlık yazın.");
-      if (!safeUrl(r.url)) fail("Adres http:// veya https:// ile başlamalı.");
-      await B.addResource(r);
-      render();
-    });
   }
 
   function viewMathGame(token) {
@@ -1122,7 +1160,7 @@
       q = { text: `${a} ${op} ${b}`, ans };
     }
     app.innerHTML = `
-      <p><a href="#/oyunlar">← Oyun & Siteler</a></p>
+      <p><a href="#/uygulamalar">← Uygulamalarım</a></p>
       <section class="card narrow center game" id="game">
         <h2 style="justify-content:center">🧮 Hızlı Matematik</h2>
         <p class="muted">${TOTAL} işlem çöz. Ne kadar hızlı ve doğru olursan o kadar iyi!</p>
@@ -1158,7 +1196,7 @@
         <h2 style="justify-content:center">🏁 Bitti!</h2>
         <div class="g-q">${correct}/${TOTAL}</div>
         <p class="muted">Süre: ${sec} saniye</p>
-        <div class="actions" style="justify-content:center"><button class="btn" id="g-again" type="button">Tekrar oyna</button><a class="btn ghost" href="#/oyunlar">Geri</a></div>`;
+        <div class="actions" style="justify-content:center"><button class="btn" id="g-again" type="button">Tekrar oyna</button><a class="btn ghost" href="#/uygulamalar">Geri</a></div>`;
       $("#g-again").addEventListener("click", () => render());
     }
   }
@@ -1190,7 +1228,7 @@
           case "odevler": await viewAssignments(token); break;
           case "odev": await viewAssignment(token, arg); break;
           case "mesajlar": await viewMessages(token, arg); break;
-          case "oyunlar": await viewResources(token); break;
+          case "uygulamalar": case "oyunlar": await viewResources(token); break;
           case "oyun": viewMathGame(token); break;
           default: await viewDashboard(token);
         }

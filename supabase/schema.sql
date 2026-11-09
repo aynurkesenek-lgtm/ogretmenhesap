@@ -47,14 +47,18 @@ create table if not exists public.activity (        -- öğrenci etkinlik geçmi
 );
 create index if not exists activity_user_at_idx on public.activity (user_id, at desc);
 
-create table if not exists public.resources (       -- öğretmenin eklediği oyun / site bağlantıları
+create table if not exists public.resources (       -- Uygulamalarım: online / Drive / oyun / site bağlantıları
   id          uuid primary key default gen_random_uuid(),
   title       text not null,
   url         text not null check (url ~* '^https?://'),
-  kind        text not null default 'oyun' check (kind in ('oyun', 'site')),
+  kind        text not null default 'online',
   description text default '',
+  visible     boolean not null default true,         -- false: yalnızca öğretmen görür
   created_at  timestamptz not null default now()
 );
+alter table public.resources add column if not exists visible boolean not null default true;
+alter table public.resources drop constraint if exists resources_kind_check;
+alter table public.resources add constraint resources_kind_check check (kind in ('online', 'drive', 'oyun', 'site'));
 
 create table if not exists public.assignments (     -- ödevler
   id           uuid primary key default gen_random_uuid(),
@@ -196,9 +200,10 @@ drop policy if exists activity_teacher_delete on public.activity;
 create policy activity_teacher_delete on public.activity for delete to authenticated
   using (public.is_teacher());
 
--- resources: herkes okur, öğretmen yönetir
+-- resources (Uygulamalarım): öğrenciler yalnızca paylaşılanları görür, öğretmen yönetir
 drop policy if exists resources_select on public.resources;
-create policy resources_select on public.resources for select to authenticated using (true);
+create policy resources_select on public.resources for select to authenticated
+  using (visible or public.is_teacher());
 drop policy if exists resources_teacher on public.resources;
 create policy resources_teacher on public.resources for all to authenticated
   using (public.is_teacher()) with check (public.is_teacher());

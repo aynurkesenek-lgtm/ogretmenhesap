@@ -12,7 +12,7 @@
 | Öğrenciler | Tüm öğrenciler, profil, teslim ve puan özeti, **etkinlik geçmişi** | — |
 | Ödevler | Tüm ya da seçili öğrencilere gönderme, kopyalayarak haftalık tekrar, puanlama, **düzeltme için geri gönderme** | Ödevi görme, cevap ve bağlantı gönderme, geri bildirimi görme |
 | Mesajlar | Öğrencilerle yazışma, **öğrenciler arası tüm yazışmaları görme**, mesaj silme, öğrenciler arası mesajlaşmayı açma/kapama | Öğretmenle ve izin varsa diğer öğrencilerle yazışma |
-| Oyun & Siteler | Bağlantı ekleme/silme | Panel üzerinden açma (geçmişe kaydedilir), yerleşik "Hızlı Matematik" oyunu |
+| Uygulamalarım | Online uygulama, Drive, oyun ve site ekleme; "öğrenciler görebilsin / yalnızca ben" seçimi | Online uygulamaları tek tıkla açma, Drive uygulamaları için "Drive'da aç" bağlantısı (açılanlar geçmişe kaydedilir), yerleşik "Hızlı Matematik" oyunu |
 
 **Etkinlik geçmişi** (yalnızca öğretmen görür): girişler, açılan sayfalar, panel üzerinden açılan oyun ve siteler, oyun skorları, ödev teslimleri. Tarayıcı güvenliği gereği sistem dışında ziyaret edilen siteler izlenemez. Öğrencilere, etkinliklerinin ve mesajlarının öğretmen tarafından görülebildiği panelde açıkça bildirilir.
 
