@@ -2,16 +2,16 @@
 //  AYARLAR — Supabase bağlantı bilgileri
 //  Supabase > Project Settings > API (Data API) sayfasından alınır.
 //
-//  SUPABASE_URL      : Project URL  (https://xxxxxxxx.supabase.co)
-//  SUPABASE_ANON_KEY : "anon public" ya da "publishable" anahtar
+//  SUPABASE_URL      : Project URL  ("https://pokvztbgcmlwytxunles.supabase.co")
+//  SUPABASE_ANON_KEY :"sb_publishable_dNNjfeF1ObADXxj24LQWag_eILuc5wQ"
 //
 //  ⚠️ "service_role" / "secret" anahtarını ASLA buraya yazmayın.
 //  Bu dosya herkese açıktır; güvenliği kurulum.sql içindeki kurallar sağlar.
 //  Alanlar boş kaldığı sürece site DEMO MODUNDA çalışır.
 // ============================================================
 
-export const SUPABASE_URL = "";
-export const SUPABASE_ANON_KEY = "";
+export const SUPABASE_URL = "https://pokvztbgcmlwytxunles.supabase.co;
+export const SUPABASE_ANON_KEY = "sb_publishable_dNNjfeF1ObADXxj24LQWag_eILuc5wQ;
 
 // Öğretmen ve öğrenciler kullanıcı adıyla girer; arka planda
 // "kullaniciadi@" + bu alan adı kullanılır (kurulum.sql ile aynı olmalı).
