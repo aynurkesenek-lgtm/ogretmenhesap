@@ -1,48 +1,42 @@
 # Öğretmen Hesap
 
-Öğretmen ve öğrenciler için kişisel çalışma paneli. Herkes kendi hesabıyla girer ve yalnızca kendi ekranını görür.
+Yönetici, öğretmen ve öğrenciler için çalışma paneli. Herkes kendi hesabıyla girer ve yalnızca kendi ekranını görür. Tüm veriler **Supabase** (PostgreSQL) veritabanında tutulur.
 
-| Öğretmen paneli | Öğrenci paneli |
-|---|---|
-| Bugün: o günün dersleri, yapılacaklar, son notlar | Bugün: bekleyen ödevler, son duyurular |
-| Görevlerim (tarihli yapılacaklar) | Ödevlerim (tamamladım işareti) |
-| Haftalık ders programı | Yapılacaklarım (kişisel liste) |
-| Notlarım (yalnızca öğretmen görür) | Duyurular (kendi sınıfına ait) |
-| Duyurular (sınıfa ya da herkese) | Hesabım (şifre değiştirme) |
-| Ödevler + kimin tamamladığını izleme | |
-| Öğrenci hesabı açma ve kapatma | |
+## Roller
 
-## Çalışma modları
+| Rol | Kim? | Yetkiler |
+|---|---|---|
+| **Yönetici** | Tek kişi (ilk açılan hesap) | Öğretmen ekranlarının tamamı + kullanıcı açma, kapatma, şifre sıfırlama, silme |
+| **Öğretmen** | Yöneticinin açtığı hesaplar | Kendi yıllık planları, modülleri, günlük aktiviteleri, notları, programı; sınıflara duyuru ve ödev |
+| **Öğrenci** | Yöneticinin açtığı hesaplar | Kendi sınıfının duyuru ve ödevleri, ödev işaretleme, kişisel yapılacaklar |
 
-- **Demo modu** (varsayılan): `firebase-config.js` içindeki `apiKey` boş olduğu sürece veriler yalnızca o tarayıcıda saklanır. Sayfayı denemek için kullanılır.
-  Öğretmen girişi: `ogretmen@ornek.com` / `123456`
-- **Bulut modu**: Firebase ayarları girildiğinde tüm veriler Google Firebase'de (Firestore) saklanır. Hangi cihazdan girilirse girilsin aynı veriler görünür.
+## Öğretmen ekranları
 
-## Buluta bağlama (bir kez, yaklaşık 15 dakika)
+- **Bugün:** o günün dersleri, aktiviteleri, yapılacakları, son notlar
+- **Günlük Aktiviteler:** her gün için ders içi etkinlik planı ve "yapıldı" işareti
+- **Yıllık Planlar:** ders ve sınıf düzeyine göre haftalık plan (Excel'den toplu yapıştırma)
+- **Ders Modülleri:** ünite/konu içerikleri, ders akışı, kaynak bağlantıları
+- **Ders Programı, Görevlerim, Notlarım** (etiketli), **Duyurular, Ödevler** (kimin tamamladığını izleme)
 
-1. <https://console.firebase.google.com> adresinde Google hesabınızla **Proje ekle** deyin (örn. `ogretmenhesap`). Google Analytics gerekmez.
-2. **Build → Authentication → Başlayın → E-posta/Şifre**'yi etkinleştirin.
-3. **Authentication → Users → Kullanıcı ekle**: Öğretmen e-postanızı ve güçlü bir şifre girin.
-4. **Build → Firestore Database → Veritabanı oluştur**. Konum olarak `eur3 (Europe)` seçin, **üretim modunda** başlatın.
-5. **Firestore → Kurallar** sekmesine `firestore.rules` dosyasının içeriğini yapıştırın. İçindeki `ogretmen@ornek.com` adresini kendi e-postanızla değiştirip **Yayınla**'ya basın.
-6. **Proje ayarları (⚙️) → Genel → Uygulamalarınız → Web (</>)** ile bir web uygulaması ekleyin. Çıkan `firebaseConfig` değerlerini `firebase-config.js` dosyasına yapıştırın. Aynı dosyadaki `OGRETMEN_EPOSTA` alanını da güncelleyin.
-7. **Authentication → Ayarlar → Yetkili alan adları** listesine `aynurkesenek-lgtm.github.io` adresini ekleyin.
+## Kurulum (Supabase)
 
-Bundan sonra sayfayı yenilediğinizde üstteki "Demo modu" şeridi kaybolur ve site bulut modunda çalışır.
+1. Supabase projesinde **SQL Editor → New query** açın. Sitedeki **🛠️ SQL Kurulum** butonundan kodu kopyalayıp yapıştırın ve **Run** deyin. Kod `kurulum.sql` dosyasında da duruyor.
+2. **Authentication → Users → Add user → Create new user** ile kendi e-posta ve şifrenizi girin, **Auto Confirm User** seçeneğini işaretleyin. İlk açılan bu hesap **yönetici** olur.
+3. **Authentication → Sign In / Providers** bölümünde **Allow new users to sign up** seçeneğini kapatın. Böylece hesapları yalnızca yönetici açabilir.
+4. **Project Settings → API (Data API)** sayfasındaki **Project URL** ve **anon / publishable** anahtarını `ayarlar.js` dosyasına yazın.
+5. Kurulum bitince `ayarlar.js` dosyasında `SQL_BUTONU_GOSTER = false` yapın.
 
-## Öğrenci hesapları
+> ⚠️ `service_role` / `secret` anahtarını hiçbir dosyaya yazmayın. `anon` anahtarı herkese açık olabilir; verileri veritabanındaki satır düzeyi güvenlik (RLS) kuralları korur.
 
-- Hesapları öğretmen, **Öğrenciler** sayfasından açar. Öğrenciden e-posta istenmez; kullanıcı adı ve şifre verilir.
-- Kişisel veri olarak yalnızca **ad soyad** ve **sınıf** tutulur (KVKK gereği veri en aza indirilir).
-- Ayrılan öğrencinin hesabı **Kapat** düğmesiyle pasif hâle getirilir. Pasif hesap hiçbir veriye erişemez.
-- Bir öğrenci şifresini unutursa: Firebase Console → Authentication → Users bölümünden hesabı silip aynı kullanıcı adıyla yeniden açabilirsiniz.
+`ayarlar.js` boş kaldığı sürece site **demo modunda** çalışır: veriler yalnızca o tarayıcıda saklanır. Demo yönetici girişi: `yonetici` / `123456`.
 
-## Güvenlik notları
+## Güvenlik ve KVKK
 
-- `firebase-config.js` içindeki bilgiler gizli değildir; erişimi `firestore.rules` kuralları sınırlar.
-- Öğretmen alanına (notlar, görevler, program) yalnızca öğretmen hesabı erişebilir.
-- Öğrenciler yalnızca kendi kaydını, kendi listesini, duyuruları ve ödevleri görebilir.
-- Sayfaya öğrenci notu, fotoğrafı ya da hassas bilgi koymayın.
+- Öğretmen ve öğrenciler e-posta yerine **kullanıcı adıyla** girer; öğrenciden e-posta istenmez.
+- Öğrenci için yalnızca **ad soyad** ve **sınıf** tutulur.
+- Öğretmenin planları, notları ve aktiviteleri yalnızca kendisine (ve yöneticiye) açıktır.
+- Öğrenciler yalnızca kendi sınıflarının duyuru ve ödevlerini, kendi teslim kayıtlarını görür.
+- Kapatılan hesap hiçbir veriye erişemez.
 
 ## Dosyalar
 
@@ -51,6 +45,6 @@ Bundan sonra sayfayı yenilediğinizde üstteki "Demo modu" şeridi kaybolur ve 
 | `index.html` | Sayfa iskeleti |
 | `style.css` | Görünüm (açık/koyu tema, mobil uyumlu) |
 | `app.js` | Ekranlar ve işleyiş |
-| `data.js` | Veri katmanı (Firebase ya da demo) |
-| `firebase-config.js` | Ayarlar (Firebase bilgileri, öğretmen e-postası, okul adı) |
-| `firestore.rules` | Bulut veritabanı güvenlik kuralları |
+| `data.js` | Veri katmanı (Supabase ya da demo) |
+| `ayarlar.js` | Supabase bağlantı bilgileri ve site ayarları |
+| `kurulum.sql` | Veritabanı tabloları, güvenlik kuralları, yönetici fonksiyonları |

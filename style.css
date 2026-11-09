@@ -75,7 +75,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--vurgu); out
 .menu-btn:hover { background: var(--zemin); }
 .menu-btn.aktif { background: var(--vurgu-acik); color: var(--vurgu); font-weight: 600; }
 .yan .alt-kisim { margin-top: auto; display: grid; gap: .4rem; }
-.ana { padding: 1.5rem; max-width: 1100px; width: 100%; }
+.ana { padding: 1.5rem; max-width: 1100px; width: 100%; min-width: 0; }
 .ust-baslik { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
 .ust-baslik p { margin: 0; color: var(--soluk); }
 .demo-serit { background: var(--sari-acik); padding: .4rem 1rem; font-size: .85rem; text-align: center; }
@@ -140,3 +140,33 @@ table.program { border-collapse: collapse; width: 100%; min-width: 640px; }
   .menu-btn { white-space: nowrap; padding: .45rem .65rem; font-size: .9rem; }
   .ana { padding: 1rem; }
 }
+
+/* SQL kurulum penceresi */
+.sql-btn { color: var(--vurgu); border: 1px dashed var(--vurgu); }
+dialog#sqlDialog { width: min(900px, calc(100% - 2rem)); max-height: calc(100vh - 2rem); border: 0; border-radius: 16px; padding: 1.25rem; background: var(--kart); color: var(--metin); box-shadow: 0 10px 40px rgba(0,0,0,.3); display: none; flex-direction: column; }
+dialog#sqlDialog[open] { display: flex; }
+dialog#sqlDialog::backdrop { background: rgba(15, 25, 40, .55); }
+.dlg-ust { display: flex; justify-content: space-between; align-items: center; }
+.adimlar { margin: .25rem 0 .75rem; padding-left: 1.25rem; }
+.adimlar li { margin: .2rem 0; }
+.dlg-arac { display: flex; gap: .75rem; align-items: center; margin-bottom: .75rem; }
+#sqlKod { flex: 1; overflow: auto; margin: 0; background: #0f1722; color: #d6e2ee; padding: 1rem; border-radius: 10px; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; min-height: 200px; }
+
+/* Günlük aktiviteler */
+.tarih-gezgin { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.tarih-gezgin input { width: auto; }
+.cipler { display: flex; gap: .4rem; flex-wrap: wrap; }
+.cip { border: 1px solid var(--cizgi); background: var(--vurgu-acik); color: var(--vurgu); border-radius: 99px; padding: .3rem .7rem; cursor: pointer; font-size: .85rem; }
+.cip:hover { border-color: var(--vurgu); }
+
+/* Yıllık plan tablosu */
+table.plan { border-collapse: collapse; width: 100%; min-width: 900px; font-size: .88rem; }
+.plan th, .plan td { border: 1px solid var(--cizgi); padding: .45rem .55rem; text-align: left; vertical-align: top; }
+.plan th { background: var(--zemin); font-size: .8rem; white-space: nowrap; }
+.plan td:first-child { text-align: center; font-weight: 600; }
+.plan tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--zemin) 50%, transparent); }
+
+.satir-arac { display: flex; gap: .3rem; align-items: center; flex-wrap: wrap; }
+.modul a { color: var(--vurgu); font-weight: 600; }
+.sekmeler + .izgara, .sekmeler + p.bos { margin-top: 0; }
+.sekmeler button.aktif .soluk { color: inherit; opacity: .75; }
