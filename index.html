@@ -25,29 +25,9 @@
     <p>Öğretmen Hesap · Öğretmen ve öğrenci paneli</p>
   </footer>
 
-  <!-- GEÇİCİ: Supabase kurulum SQL'i. Bağlantı kurulduktan sonra bu blok ve js/setup.js kaldırılacak. -->
-  <button id="btn-sql" class="sql-fab" type="button" title="Supabase kurulum SQL kodu">🗄️ SQL</button>
-  <dialog id="sql-dialog" class="sql-dialog" aria-labelledby="sql-title">
-    <div class="sql-head">
-      <h2 id="sql-title">🗄️ Supabase kurulum SQL'i</h2>
-      <button class="btn ghost small" type="button" data-close>Kapat ✕</button>
-    </div>
-    <ol class="sql-steps">
-      <li><strong>Kopyala</strong> butonuna basın → Supabase → <strong>SQL Editor</strong> → <strong>New query</strong> → yapıştırın → <strong>Run</strong>.</li>
-      <li><strong>Authentication → Sign In / Providers → Email</strong>: "Confirm email" seçeneğini <strong>kapatın</strong>.</li>
-      <li><strong>Authentication → Users → Add user</strong>: e-posta <code>rasyonelx@ogretmenhesap.app</code>, şifre: belirlediğiniz öğretmen şifresi, "Auto Confirm User" işaretli.</li>
-      <li><strong>Project Settings → API</strong>: <em>Project URL</em> ve <em>anon / publishable</em> anahtarı bana iletin (secret / service_role anahtarını <strong>paylaşmayın</strong>).</li>
-    </ol>
-    <div class="sql-actions">
-      <button class="btn" type="button" id="sql-copy">📋 Kopyala</button>
-      <span id="sql-msg" class="saved"></span>
-    </div>
-    <pre id="sql-code" class="sql-code">Yükleniyor…</pre>
-  </dialog>
 
   <script src="js/config.js"></script>
   <script src="js/backend.js"></script>
   <script src="js/app.js"></script>
-  <script src="js/setup.js"></script>
 </body>
 </html>

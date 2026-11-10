@@ -19,7 +19,7 @@
 
 ## Supabase kurulumu
 
-1. Sitede soldaki **🗄️ SQL** butonuna tıklayın → **Kopyala** → Supabase **SQL Editor → New query** → yapıştırın → **Run**. (Dosya: `supabase/schema.sql`; tekrar çalıştırılabilir.)
+1. Supabase **SQL Editor → New query** → `supabase/schema.sql` dosyasının tamamını yapıştırın → **Run** (tekrar çalıştırılabilir).
 2. **Authentication → Sign In / Providers → Email**: "Confirm email" seçeneğini **kapatın** (kullanıcı adları gerçek e-posta değildir).
 3. **Authentication → Users → Add user**: `rasyonelx@ogretmenhesap.app` + öğretmen şifresi, "Auto Confirm User" işaretli. Bunu öğrenciler kayıt olmadan **önce** yapın.
 4. **Project Settings → API**: *Project URL* ve *anon / publishable* anahtarı `js/config.js` içine yazın:
@@ -27,9 +27,9 @@
    supabase: { url: "https://PROJE-ID.supabase.co", anonKey: "..." },
    ```
    Bu anahtar tarayıcıda kullanılmak üzere tasarlanmıştır; veriler satır düzeyi güvenlik (RLS) kurallarıyla korunur. **`service_role` / `secret` anahtarını asla koda yazmayın veya paylaşmayın.**
-5. Bağlantı kurulunca `index.html` içindeki "GEÇİCİ" blok ve `js/setup.js` kaldırılacaktır.
+5. Authentication ayarlarında **Allow new users to sign up** açık olmalıdır.
 
-`supabase` ayarı boşken site **demo modunda** çalışır (veriler yalnızca o cihazdaki tarayıcıda).
+Site şu an **ogretmenpanel** Supabase projesine bağlıdır. `supabase` ayarı boş bırakılırsa site **demo modunda** çalışır (veriler yalnızca o cihazdaki tarayıcıda).
 
 ## Güvenlik notları
 
@@ -47,7 +47,6 @@
 | `js/backend.js` | Veri altyapısı (Supabase + demo modu) |
 | `js/app.js` | Ekranlar ve yönlendirme |
 | `supabase/schema.sql` | Tablolar, fonksiyonlar ve RLS kuralları |
-| `js/setup.js` | Geçici SQL penceresi |
 
 ## Yerelde çalıştırma ve yayınlama
 

@@ -25,5 +25,10 @@ window.OGH_CONFIG = {
   // ⚠️ "service_role" / "secret" anahtarını ASLA buraya yazmayın.
   // Örnek:
   // supabase: { url: "https://abcd1234.supabase.co", anonKey: "eyJhbGciOi..." },
-  supabase: null,
+  // Öğretmen Hesap Supabase projesi (ogretmenpanel). Publishable anahtar tarayıcıda kullanılmak üzere tasarlanmıştır;
+  // veriler supabase/schema.sql içindeki RLS kurallarıyla korunur.
+  supabase: {
+    url: "https://pokvztbgcmlwytxunles.supabase.co",
+    anonKey: "sb_publishable_dNNjfeF1ObADXxj24LQWag_eILuc5wQ",
+  },
 };
