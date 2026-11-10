@@ -7,8 +7,8 @@
 | Özellik | Öğretmen (tek yönetici: `rasyonelx`) | Öğrenci |
 |---|---|---|
 | Giriş / kayıt | Hazır hesap | Kullanıcı adı + şifre ile kendisi kayıt olur |
-| Panel | Özet sayılar, ders programı, yapılacaklar, notlar, yaklaşan tarihler | Aynı araçlar + bekleyen ödev / puan özeti |
-| Planlarım | Yıllık plan (CSV indirme), ders modülleri, günlük aktiviteler | — |
+| Panel | Özet sayılar, **duyuru yayınlama** (tüm ya da seçili öğrencilere), ders programı, yapılacaklar, notlar, yaklaşan tarihler | **Duyurular** (yeni olanlar işaretli), aynı araçlar + bekleyen ödev / puan özeti |
+| Planlarım | Yıllık plan (**Excel/Word'den toplu yapıştırma**, CSV indirme), ders modülleri, günlük aktiviteler | — |
 | Öğrenciler | Tüm öğrenciler, profil, teslim ve puan özeti, **etkinlik geçmişi** | — |
 | Ödevler | Tüm ya da seçili öğrencilere gönderme, kopyalayarak haftalık tekrar, puanlama, **düzeltme için geri gönderme** | Ödevi görme, cevap ve bağlantı gönderme, geri bildirimi görme |
 | Notlar | Google Tablosundaki not çizelgesini bağlantıyla veya yapıştırarak aktarma, satırları öğrenci hesaplarına bağlama (okul numarası eşleşirse otomatik), sınıf ortalaması | **Notlarım**: yalnızca kendi yazılı/performans notları, ortalama ve durum |
@@ -30,6 +30,10 @@
 5. Authentication ayarlarında **Allow new users to sign up** açık olmalıdır.
 
 Site şu an **ogretmenpanel** Supabase projesine bağlıdır. `supabase` ayarı boş bırakılırsa site **demo modunda** çalışır (veriler yalnızca o cihazdaki tarayıcıda).
+
+### Mevcut projeyi güncelleme
+
+Kurulumu daha önce yapılmış projelerde `supabase/guncelleme_01_duyurular_temizlik.sql` dosyasını SQL Editor'da bir kez çalıştırın. Duyurular tablosunu ekler ve aynı projeye önceden kurulmuş ikinci sürümün (`kurulum.sql`) kalıntılarını kaldırır. O tablolarda veri varsa hiçbir şey silmeden durur.
 
 ## Güvenlik notları
 

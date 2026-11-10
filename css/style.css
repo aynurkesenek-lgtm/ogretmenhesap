@@ -258,3 +258,16 @@ table.grades select { min-width: 190px; padding: 6px 8px; font-size: .85rem; }
 .grade-tile.strong .gt-l { color: rgba(255, 255, 255, .85); }
 .gt-l { font-size: .82rem; color: var(--muted); }
 .gt-n { font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* Duyurular */
+.ann-card { margin-bottom: 16px; }
+.ann-card details > summary { list-style: none; display: inline-block; }
+.ann-card details > summary::-webkit-details-marker { display: none; }
+.ann-list { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; }
+.ann-list li { background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+.ann-list li.ann-new { border-left: 4px solid var(--role); }
+.ann-head { display: flex; align-items: center; gap: 8px; }
+.ann-head strong { flex: 1; }
+.ann-body { margin: 6px 0; word-break: break-word; }
+.paste-box { margin-top: 14px; }
+.paste-box summary { cursor: pointer; font-weight: 600; color: var(--role); }

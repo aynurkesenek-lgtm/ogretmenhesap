@@ -282,9 +282,11 @@
     const r = ROLES[me.role];
     const T = isTeacher();
     app.innerHTML = `<p class="muted center">Yükleniyor…</p>`;
-    const [d, assignments, subs, msgs, students] = await Promise.all([
+    const [d, assignments, subs, msgs, students, anns0] = await Promise.all([
       B.getData(me.uid), B.listAssignments(), B.listSubmissions(), B.listMessages(), T ? B.listStudents() : Promise.resolve([]),
+      B.listAnnouncements(),
     ]);
+    let anns = anns0;
     if (!live(token)) return;
     const queueSave = makeSaver(d);
     const p = me.profile || {};
@@ -332,6 +334,28 @@
       <div class="stats">
         ${stats.map(([ic, n, l, href]) => `<a class="stat card" href="${href}"><span class="stat-ic">${ic}</span><span class="stat-n">${esc(n)}</span><span class="stat-l">${l}</span></a>`).join("")}
       </div>
+
+      <section class="card ann-card" id="ann-card">
+        <h2>📣 Duyurular ${T ? "" : `<span class="badge" id="ann-new" hidden></span>`}</h2>
+        ${T ? `
+        <details id="ann-form-wrap">
+          <summary class="btn small">+ Yeni duyuru</summary>
+          <form id="f-ann" style="margin-top:12px">
+            <label for="ann-title">Başlık</label>
+            <input id="ann-title" name="title" required maxlength="200" placeholder="ör. Cuma günü veli toplantısı">
+            <label for="ann-body">Metin</label>
+            <textarea id="ann-body" name="body" class="short" maxlength="5000" placeholder="Duyurunun ayrıntıları…"></textarea>
+            <label>Kime?</label>
+            <label class="check"><input type="checkbox" id="ann-all" checked> Tüm öğrenciler</label>
+            <div class="pick-list" id="ann-pick" hidden>
+              ${students.slice().sort((a, b) => nameOf(a).localeCompare(nameOf(b), "tr")).map((st) => `<label class="check"><input type="checkbox" name="to" value="${esc(st.uid)}"> ${esc(nameOf(st))} <span class="muted">@${esc(st.username)}</span></label>`).join("") || `<p class="muted">Kayıtlı öğrenci yok.</p>`}
+            </div>
+            <p class="error" id="err-ann"></p>
+            <button class="btn" type="submit">Yayınla</button>
+          </form>
+        </details>` : ""}
+        <ul class="ann-list" id="anns"></ul>
+      </section>
 
       <div class="grid">
         <section class="card col-4">
@@ -467,6 +491,60 @@
       d.events = d.events.filter((x) => x.id !== del); renderEvents(); queueSave(0);
     });
     $("#notes").addEventListener("input", (ev) => { d.notes = ev.target.value; queueSave(); });
+
+    /* Duyurular */
+    const annSeenKey = () => "ogretmenhesap.annSeen." + me.uid;
+    const getAnnSeen = () => { try { return localStorage.getItem(annSeenKey()) || ""; } catch (e) { return ""; } };
+    const seenAt = getAnnSeen();
+    function renderAnns() {
+      const box = $("#anns");
+      const byUid = Object.fromEntries(students.map((st) => [st.uid, st]));
+      if (!anns.length) {
+        box.innerHTML = `<li class="muted">${T ? "Henüz duyuru yayınlamadınız." : "Öğretmeninden henüz duyuru yok."}</li>`;
+      } else {
+        box.innerHTML = anns.slice(0, T ? 20 : 10).map((a) => {
+          const isNew = !T && a.createdAt > seenAt;
+          const to = a.recipients && a.recipients.length
+            ? a.recipients.map((u) => esc(nameOf(byUid[u]))).join(", ")
+            : "Tüm öğrenciler";
+          return `<li class="${isNew ? "ann-new" : ""}">
+            <div class="ann-head">
+              ${isNew ? `<span class="badge">Yeni</span>` : ""}
+              <strong>${esc(a.title)}</strong>
+              ${T ? `<button class="btn icon" data-del-ann="${esc(a.id)}" title="Sil" aria-label="Duyuruyu sil">✕</button>` : ""}
+            </div>
+            ${a.body ? `<p class="ann-body">${nl2br(a.body)}</p>` : ""}
+            <span class="hint">${fmtStamp(a.createdAt)}${T ? " · Kime: " + to : ""}</span>
+          </li>`;
+        }).join("");
+      }
+      if (!T) {
+        const n = anns.filter((a) => a.createdAt > seenAt).length;
+        const badge = $("#ann-new");
+        if (badge) { badge.hidden = !n; badge.textContent = n + " yeni"; }
+        if (anns.length) { try { localStorage.setItem(annSeenKey(), anns[0].createdAt); } catch (e) { /* yok say */ } }
+      }
+    }
+    renderAnns();
+    if (T) {
+      $("#ann-all").addEventListener("change", (ev) => { $("#ann-pick").hidden = ev.target.checked; });
+      bindForm($("#f-ann"), $("#err-ann"), async (fd) => {
+        const title = String(fd.get("title") || "").trim();
+        if (!title) fail("Başlık yazın.");
+        const all = $("#ann-all").checked;
+        const recipients = all ? null : fd.getAll("to").map(String);
+        if (!all && !recipients.length) fail("En az bir öğrenci seçin ya da \"Tüm öğrenciler\"i işaretleyin.");
+        await B.addAnnouncement({ title, body: String(fd.get("body") || "").trim(), recipients });
+        anns = await B.listAnnouncements();
+        $("#f-ann").reset(); $("#ann-pick").hidden = true; $("#ann-form-wrap").open = false;
+        renderAnns();
+      });
+      $("#anns").addEventListener("click", async (ev) => {
+        const id = ev.target.dataset.delAnn; if (!id) return;
+        if (!confirm("Bu duyuru öğrencilerin panelinden de kaldırılacak. Silinsin mi?")) return;
+        try { await B.deleteAnnouncement(id); anns = anns.filter((a) => a.id !== id); renderAnns(); } catch (e) { alert(e.message); }
+      });
+    }
   }
 
   /* ================= Planlarım (öğretmen) ================= */
@@ -499,6 +577,21 @@
             <div><label for="yp-assess">Ölçme-değerlendirme</label><input id="yp-assess" name="assess" placeholder="ör. Çıkış kartı, rubrik"></div>
             <div class="span-all"><button class="btn" type="submit">Ekle</button></div>
           </form>
+          <details class="paste-box">
+            <summary>📋 Excel / Word'den toplu yapıştır</summary>
+            <p class="hint">Plan tablonuzu (başlık satırıyla birlikte) Excel, Word ya da Google E-Tablolar'dan seçip kopyalayın, aşağıya yapıştırın.
+              Sütunlar başlıklardan tanınır: <strong>Ay · Hafta · Tarih · Sınıf · Ünite/Tema · Konu · Kazanım · Ders saati · Yöntem · Ölçme</strong>.
+              Başlık yoksa bu sıra kullanılır. Ay sütunu yoksa yukarıdaki formda seçili ay kullanılır.</p>
+            <form id="f-paste-yp">
+              <textarea id="yp-paste" class="short" placeholder="Ay	Hafta	Ünite	Konu	Kazanım	…"></textarea>
+              <div class="actions">
+                <button class="btn ghost" type="button" id="yp-preview">Önizle</button>
+                <button class="btn" type="submit">Plana ekle</button>
+                <span class="error" id="err-paste-yp"></span>
+              </div>
+              <p class="hint" id="yp-paste-info"></p>
+            </form>
+          </details>
         </section>
         <section class="card" style="margin-top:16px">
           <div class="row wrap" style="justify-content:space-between">
@@ -528,6 +621,53 @@
       };
       render();
       $("#yp-filter").addEventListener("change", render);
+      // --- Excel/Word'den toplu yapıştırma ---
+      const PLAN_COLS = [
+        ["month", ["ay"]], ["week", ["hafta"]], ["date", ["tarih"]], ["cls", ["sinif", "ders"]],
+        ["unit", ["unite", "tema", "alan"]], ["topic", ["konu"]], ["outcome", ["kazanim", "ogrenme ciktisi", "cikti"]],
+        ["hours", ["ders saati", "saat", "sure"]], ["method", ["yontem", "teknik", "strateji"]],
+        ["assess", ["olcme", "degerlendirme"]],
+      ];
+      const DEFAULT_ORDER = ["month", "week", "date", "cls", "unit", "topic", "outcome", "hours", "method", "assess"];
+      function parsePlanPaste(text) {
+        const rows = parseCSV(text).map((r) => r.map((c) => String(c || "").trim()));
+        if (!rows.length) fail("Yapıştırılmış satır bulunamadı.");
+        const head = rows[0].map((h) => normUser(h));
+        let map = null;
+        const hits = head.map((h) => { const c = PLAN_COLS.find(([, keys]) => keys.some((k) => h === k || h.startsWith(k))); return c ? c[0] : null; });
+        if (hits.filter(Boolean).length >= 2) { map = hits; rows.shift(); }
+        else map = DEFAULT_ORDER;
+        const fallbackMonth = $("#yp-month").value;
+        const monthOf = (v) => MONTHS.find((m) => normUser(m) === normUser(v)) || null;
+        const out = [];
+        for (const r of rows) {
+          const x = { id: uid(), done: false, month: "", week: "", cls: "", unit: "", topic: "", hours: "", outcome: "", method: "", assess: "" };
+          let date = "";
+          map.forEach((k, idx) => { if (!k || r[idx] == null) return; if (k === "date") date = r[idx]; else x[k] = r[idx]; });
+          x.month = monthOf(x.month) || fallbackMonth;
+          if (date) x.week = x.week ? `${x.week} (${date})` : date;
+          if (!x.unit && !x.topic && !x.outcome) continue;
+          if (!x.unit) x.unit = x.topic || "—";
+          out.push(x);
+        }
+        if (!out.length) fail("Ünite, konu veya kazanım içeren satır bulunamadı.");
+        return { items: out, header: map !== DEFAULT_ORDER };
+      }
+      $("#yp-preview").addEventListener("click", () => {
+        $("#err-paste-yp").textContent = "";
+        try {
+          const { items, header } = parsePlanPaste($("#yp-paste").value);
+          const f = items[0];
+          $("#yp-paste-info").textContent = `${items.length} satır eklenecek (${header ? "başlıklardan tanındı" : "varsayılan sütun sırası"}). İlk satır: ${f.month} · ${f.week || "—"} · ${f.unit} · ${f.topic || "—"}`;
+        } catch (e) { $("#err-paste-yp").textContent = e.message; $("#yp-paste-info").textContent = ""; }
+      });
+      bindForm($("#f-paste-yp"), $("#err-paste-yp"), async () => {
+        const { items } = parsePlanPaste($("#yp-paste").value);
+        d.yearPlan.push(...items); queueSave(0);
+        $("#yp-paste").value = ""; $("#yp-paste-info").textContent = `✓ ${items.length} satır plana eklendi.`;
+        render();
+      });
+
       bindForm($("#f-yp"), null, async (fd) => {
         const x = { id: uid(), done: false };
         for (const k of ["month", "week", "cls", "unit", "topic", "hours", "outcome", "method", "assess"]) x[k] = String(fd.get(k) || "").trim();
@@ -952,7 +1092,9 @@
   function parseCSV(text) {
     const rows = []; let row = [], cell = "", q = false;
     const t = String(text || "").replace(/^﻿/, "");
-    const sep = !/,/.test(t.split("\n")[0]) && /\t/.test(t.split("\n")[0]) ? "\t" : (/;/.test(t.split("\n")[0]) && !/,/.test(t.split("\n")[0]) ? ";" : ",");
+    const first = t.split("\n")[0];
+    // Excel / Word / E-Tablolar'dan yapıştırılan veri sekmeyle ayrılır; sekme varsa her zaman onu kullan.
+    const sep = /\t/.test(first) ? "\t" : (/;/.test(first) && !/,/.test(first) ? ";" : ",");
     for (let i = 0; i < t.length; i++) {
       const c = t[i];
       if (q) {

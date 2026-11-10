@@ -42,7 +42,7 @@
   /* ============================ YEREL (DEMO) ============================ */
   function LocalBackend() {
     const KEY = "ogretmenhesap.v4";
-    const blank = () => ({ users: [], data: {}, activity: [], resources: [], assignments: [], submissions: [], messages: [], grades: [], settings: { studentChat: false }, session: null });
+    const blank = () => ({ users: [], data: {}, activity: [], resources: [], assignments: [], submissions: [], messages: [], grades: [], announcements: [], settings: { studentChat: false }, session: null });
     let s = null;
     try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) { /* erişilemez */ }
     if (!s || !Array.isArray(s.users)) s = blank();
@@ -192,6 +192,20 @@
       },
       async deleteMessage(id) { needTeacher(); s.messages = s.messages.filter((m) => m.id !== id); persist(); },
 
+      /* Duyurular */
+      async listAnnouncements() {
+        const u = needLogin();
+        return s.announcements
+          .filter((a) => u.role === "teacher" || !a.recipients || a.recipients.includes(u.uid))
+          .sort(byDateDesc("createdAt"));
+      },
+      async addAnnouncement(a) {
+        needTeacher();
+        s.announcements.push({ id: uid(), title: a.title, body: a.body || "", recipients: a.recipients || null, createdAt: nowISO() });
+        persist();
+      },
+      async deleteAnnouncement(id) { needTeacher(); s.announcements = s.announcements.filter((a) => a.id !== id); persist(); },
+
       /* Notlar */
       async listGrades() {
         const u = needLogin();
@@ -274,6 +288,7 @@
     const mapRes = (x) => ({ id: x.id, title: x.title, url: x.url, kind: x.kind, desc: x.description || "", visible: x.visible !== false, createdAt: iso(x.created_at) });
     const mapAsg = (x) => ({ id: x.id, title: x.title, body: x.body || "", due: x.due || "", link: x.link || "", assignees: x.assignees || [], allStudents: !!x.all_students, createdAt: iso(x.created_at) });
     const mapSub = (x) => ({ id: x.id, assignmentId: x.assignment_id, uid: x.user_id, username: x.username, text: x.text || "", link: x.link || "", status: x.status, score: x.score == null ? null : Number(x.score), feedback: x.feedback || "", submittedAt: iso(x.submitted_at), gradedAt: iso(x.graded_at) });
+    const mapAnn = (x) => ({ id: x.id, title: x.title, body: x.body || "", recipients: x.recipients || null, createdAt: iso(x.created_at) });
     const mapGrade = (x) => ({ schoolNo: x.school_no, firstName: x.first_name || "", lastName: x.last_name || "", scores: Array.isArray(x.scores) ? x.scores : [], average: x.average || "", status: x.status || "", userId: x.user_id || null, updatedAt: iso(x.updated_at) });
     const mapMsg = (x) => ({ id: x.id, from: x.from_id, to: x.to_id, participants: x.participants || [], convId: x.conv_id, text: x.text, at: iso(x.at) });
 
@@ -365,6 +380,11 @@
         from_id: current.uid, to_id: to, participants: [current.uid, to].sort(), conv_id: convIdOf(current.uid, to), text,
       }))),
       deleteMessage: wrap((id) => run(sb.from("messages").delete().eq("id", id))),
+
+      /* Duyurular */
+      listAnnouncements: wrap(async () => (await run(sb.from("announcements").select("*").order("created_at", { ascending: false }))).map(mapAnn)),
+      addAnnouncement: wrap((a) => run(sb.from("announcements").insert({ title: a.title, body: a.body || "", recipients: a.recipients && a.recipients.length ? a.recipients : null }))),
+      deleteAnnouncement: wrap((id) => run(sb.from("announcements").delete().eq("id", id))),
 
       /* Notlar */
       listGrades: wrap(async () => (await run(sb.from("grades").select("*"))).map(mapGrade)),

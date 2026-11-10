@@ -109,6 +109,14 @@ create table if not exists public.grades (          -- not çizelgesi (Google Ta
 );
 create index if not exists grades_user_idx on public.grades (user_id);
 
+create table if not exists public.announcements (   -- duyurular: tüm öğrencilere ya da seçili öğrencilere
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null check (char_length(title) between 1 and 200),
+  body        text default '' check (char_length(body) <= 5000),
+  recipients  uuid[],                               -- null: tüm öğrenciler; dolu: yalnızca bu öğrenciler
+  created_at  timestamptz not null default now()
+);
+
 create table if not exists public.settings (        -- ör. öğrenciler arası mesajlaşma açık/kapalı
   id           int primary key default 1 check (id = 1),
   student_chat boolean not null default false
@@ -179,6 +187,7 @@ alter table public.submissions enable row level security;
 alter table public.messages    enable row level security;
 alter table public.settings    enable row level security;
 alter table public.grades      enable row level security;
+alter table public.announcements enable row level security;
 
 -- profiles: kendisi + öğretmen görür
 drop policy if exists profiles_select on public.profiles;
@@ -234,6 +243,14 @@ create policy grades_select on public.grades for select to authenticated
   using (public.is_teacher() or user_id = auth.uid());
 drop policy if exists grades_teacher on public.grades;
 create policy grades_teacher on public.grades for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- announcements: öğretmen yönetir; öğrenci tüm öğrencilere açık olanları ve kendisine gönderilenleri görür
+drop policy if exists announcements_select on public.announcements;
+create policy announcements_select on public.announcements for select to authenticated
+  using (public.is_teacher() or recipients is null or auth.uid() = any (recipients));
+drop policy if exists announcements_teacher on public.announcements;
+create policy announcements_teacher on public.announcements for all to authenticated
   using (public.is_teacher()) with check (public.is_teacher());
 
 -- assignments: öğretmen yönetir; öğrenci yalnızca kendisine atananları görür
