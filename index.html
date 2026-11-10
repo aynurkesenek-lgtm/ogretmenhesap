@@ -4,13 +4,30 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Öğretmen Hesap</title>
-  <meta name="description" content="Öğretmen ve öğrenciler için kişisel çalışma paneli">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f5d8a'/%3E%3Cpath d='M9 22V10h3l4 6 4-6h3v12' stroke='white' stroke-width='2.5' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css">
+  <meta name="description" content="Öğretmen ve öğrenci paneli: ödevler, mesajlaşma, öğrenci takibi, planlar ve günlük kullanım araçları.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📘</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div id="uygulama"><div class="yukleniyor">Yükleniyor…</div></div>
-  <div id="bildirim" role="status" aria-live="polite"></div>
-  <script type="module" src="app.js"></script>
+  <header class="topbar">
+    <a class="brand" href="#/">📘 <span>Öğretmen Hesap</span></a>
+    <nav id="topnav" class="topnav" hidden>
+      <a id="whoami" class="whoami" href="#/profil" title="Bilgilerim"></a>
+      <button id="btn-theme" class="btn ghost" type="button" title="Tema değiştir">🌓</button>
+      <button id="btn-logout" class="btn ghost" type="button">Çıkış</button>
+    </nav>
+  </header>
+  <nav id="tabs" class="tabs" hidden aria-label="Bölümler"></nav>
+
+  <main id="app" class="container" aria-live="polite"></main>
+
+  <footer class="footer">
+    <p>Öğretmen Hesap · Öğretmen ve öğrenci paneli</p>
+  </footer>
+
+
+  <script src="js/config.js"></script>
+  <script src="js/backend.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
