@@ -273,14 +273,35 @@
       if (/email_address_invalid|invalid format|is invalid/i.test(code + msg)) return "Supabase bu kullanıcı adını kabul etmedi (e-posta alan adı reddedildi). config.js içindeki emailDomain ayarını kontrol edin.";
       if (/signup_disabled|Signups not allowed/i.test(code + msg)) return "Supabase'de yeni kayıtlar kapalı (Authentication ayarlarından açılmalı).";
       if (/rate_limit|too many/i.test(code + msg)) return "Çok fazla deneme yapıldı. Biraz bekleyip tekrar deneyin.";
-      if (/42501|row-level security|permission denied/i.test(code + msg)) return "Bu işlem için yetkiniz yok.";
+      if (/42501|row-level security|permission denied/i.test(code + msg)) return "Bu işlem için yetkiniz yok. (Teknik ayrıntı: " + (code ? code + " " : "") + msg.slice(0, 120) + ")";
       if (/42P01|does not exist|schema cache/i.test(code + msg)) return "Veritabanı tabloları bulunamadı. Soldaki 🗄️ SQL butonundaki kodu Supabase SQL Editor'da çalıştırın.";
       if (/Failed to fetch|NetworkError|fetch/i.test(msg)) return "Sunucuya ulaşılamıyor. İnternet bağlantınızı kontrol edin.";
       return "Bir hata oluştu: " + msg;
     }
+    // Oturum belirteci süresi dolmuş ya da tarayıcıda kaybolmuşsa istek "giriş yapılmamış" gibi gider ve
+    // RLS/yetki hatası döner. Bu durumda oturumu bir kez yenileyip isteği tekrarlarız.
+    const isAuthError = (e) => /42501|PGRST301|PGRST302|JWT expired|invalid JWT|permission denied/i.test(String((e && (e.code || "")) + " " + ((e && e.message) || "")));
+    async function refreshIfLoggedIn() {
+      if (!current) return false;
+      try {
+        const { data, error } = await sb.auth.refreshSession();
+        return !error && !!(data && data.session);
+      } catch (_) { return false; }
+    }
     const wrap = (fn) => async (...args) => {
       try { return await fn(...args); }
-      catch (e) { if (e instanceof UserError) throw e; console.error(e); throw new UserError(message(e)); }
+      catch (e) {
+        if (e instanceof UserError) throw e;
+        if (isAuthError(e) && current) {
+          if (await refreshIfLoggedIn()) {
+            try { return await fn(...args); }
+            catch (e2) { if (e2 instanceof UserError) throw e2; console.error(e2); throw new UserError(message(e2)); }
+          }
+          throw new UserError("Oturumunuz sona erdi. Lütfen çıkış yapıp yeniden giriş yapın.");
+        }
+        console.error(e);
+        throw new UserError(message(e));
+      }
     };
 
     const mapStudent = (x) => ({ uid: x.id, username: x.username, role: x.role, profile: x.profile || {}, createdAt: iso(x.created_at), lastLogin: iso(x.last_login) });
